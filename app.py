@@ -14,9 +14,18 @@ app = Flask(__name__)
 app.secret_key = '04c3f5d7e8b2a196e0c7b4a1d8f3e9c2b7a6d5e4f3c2b1a0d9e8f7c6b5a4d3e2'
 
 # --- Configuration de la base de données ---
-# Utilise une variable d'environnement 'DATABASE_URL' pour la connexion à la base de données en production (PostgreSQL sur Render)
-# Si 'DATABASE_URL' n'est pas définie (en développement local), utilise SQLite.
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///site.db')
+# AJOUT DES LIGNES DE DÉBOGAGE ICI
+db_uri_env = os.environ.get('DATABASE_URL')
+print(f"DEBUG: DATABASE_URL from environment: {db_uri_env}")
+if db_uri_env:
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri_env
+    print("DEBUG: Using DATABASE_URL from environment.")
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+    print("DEBUG: DATABASE_URL not found, falling back to SQLite.")
+
+print(f"DEBUG: Final SQLALCHEMY_DATABASE_URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -32,8 +41,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    is_premium = db.Column(db.Boolean, default=False) # Champ pour le statut premium
-    # premium_until = db.Column(db.Date, nullable=True) # Non utilisé dans cette version simplifiée de PayPal, mais gardé en mémoire pour une future extension
+    is_premium = db.Column(db.Boolean, default=False)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -71,8 +79,7 @@ def index():
         flash("Vous devez avoir un abonnement actif pour utiliser le générateur.", 'info')
         return redirect(url_for('subscribe'))
     
-    # days_remaining = None # Non utilisé dans cette version simplifiée, mais gardé en mémoire pour une future extension
-    return render_template('index.html', is_premium=current_user.is_premium, days_remaining=None) # Passe days_remaining=None
+    return render_template('index.html', is_premium=current_user.is_premium, days_remaining=None)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -129,12 +136,9 @@ def logout():
 @app.route('/subscribe')
 @login_required
 def subscribe():
-    # L'URL du site est passée à la template pour les redirections PayPal
-    # L'URL complète de votre site déployé
     site_base_url = "https://generateur-art-tranche.onrender.com" 
     return render_template('subscribe.html', site_base_url=site_base_url)
 
-# Routes de retour de PayPal (succès/annulation)
 @app.route('/paypal-success')
 @login_required
 def paypal_success():
@@ -262,11 +266,8 @@ def generate_foreedge_form():
 
 
 if __name__ == '__main__':
-    with app.app_context(): # Nécessaire pour créer la base de données
-        # Supprime la base de données existante pour la recréer avec le nouveau modèle
-        # Ne faites cela qu'en DÉVELOPPEMENT. En PRODUCTION, vous ferez une migration.
-        # if os.path.exists('site.db'): # Cette ligne est commentée car la recréation se fait via shell
-        #     os.remove('site.db') 
-        # db.create_all() # Cette ligne est commentée car la recréation se fait via shell
-        pass # Aucune action n'est nécessaire ici car db.create_all() est appelé via le shell Render
+    # La création de la base de données est maintenant gérée par le script init_db.py exécuté dans la Build Command de Render.
+    # Pour le développement local, si vous voulez que site.db soit créé/mis à jour, vous devrez l'exécuter manuellement via flask shell
+    # ou ajouter un appel conditionnel ici (par exemple, si os.environ.get('FLASK_ENV') == 'development').
+    # Pour la simplicité actuelle, le `db.create_all()` ne sera pas exécuté automatiquement ici en local.
     app.run(debug=True)
