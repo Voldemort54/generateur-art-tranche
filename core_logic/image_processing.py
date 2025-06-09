@@ -366,8 +366,9 @@ def generer_pdf_a_partir_tranches(dossier_tranches_source, hauteur_livre_mm_pdf,
                    center_x_image_tranche, y_pos_frame_bottom_left + frame_height + REPERE_OFFSET_Y_MM * mm + LONGUEUR_REPERE_VERTICAL_MM * mm)
 
             # Repère du BAS (en dessous du cadre)
+            # CORRECTION : 'REPERE_OFFSET_Y_Y_MM' a été remplacé par 'REPERE_OFFSET_Y_MM'
             c.line(center_x_image_tranche, y_pos_frame_bottom_left - REPERE_OFFSET_Y_MM * mm,
-                   center_x_image_tranche, y_pos_frame_bottom_left - REPERE_OFFSET_Y_Y_MM * mm - LONGUEUR_REPERE_VERTICAL_MM * mm)
+                   center_x_image_tranche, y_pos_frame_bottom_left - REPERE_OFFSET_Y_MM * mm - LONGUEUR_REPERE_VERTICAL_MM * mm)
             # --- FIN DES REPÈRES ---
 
             tranche_actuelle_index_globale += 1
