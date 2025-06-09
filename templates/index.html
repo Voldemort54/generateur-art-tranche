@@ -98,6 +98,25 @@
             margin-bottom: 20px;
             font-size: 1.1em;
         }
+        .premium-message {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e2f0d9; /* Vert clair */
+            border: 1px solid #badbcc;
+            border-radius: 5px;
+            color: #1a642e; /* Vert foncé */
+            font-weight: bold;
+        }
+        .non-premium-message {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #ffeeba; /* Jaune clair */
+            border: 1px solid #ffdf7e;
+            border-radius: 5px;
+            color: #856404; /* Jaune foncé */
+        }
     </style>
 </head>
 <body>
@@ -105,7 +124,12 @@
         <h1>Créez votre Art sur Tranche</h1>
 
         {% if current_user.is_authenticated %}
-        <p class="user-info">Connecté en tant que : <strong>{{ current_user.email }}</strong> | <a href="{{ url_for('logout') }}">Déconnexion</a></p>
+        <p class="user-info">Connecté en tant que : <strong>{{ current_user.email }}</strong> 
+            {% if current_user.is_admin %} {# AJOUTÉ POUR LE LIEN ADMIN #}
+            | <a href="{{ url_for('admin_dashboard') }}">Tableau de bord Admin</a> {# AJOUTÉ #}
+            {% endif %} {# AJOUTÉ #}
+            | <a href="{{ url_for('logout') }}">Déconnexion</a>
+        </p>
         {% else %}
         <div class="auth-links">
             <p><a href="{{ url_for('login') }}">Connexion</a> | <a href="{{ url_for('register') }}">Inscription</a></p>
@@ -124,24 +148,34 @@
         {% endwith %}
 
         {% if current_user.is_authenticated %}
-            <form action="{{ url_for('generate_foreedge_form') }}" method="post" enctype="multipart/form-data">
-                <label for="image_source">Image source :</label>
-                <input type="file" id="image_source" name="image_source" accept="image/*" required>
+            {% if is_premium %}
+                <p class="premium-message">
+                    Vous avez un abonnement Premium actif ! Vous pouvez générer des PDFs.
+                    {% if days_remaining is not none %}
+                        (Renouvellement dans {{ days_remaining }} jours)
+                    {% endif %}
+                </p>
+                <form action="{{ url_for('generate_foreedge_form') }}" method="post" enctype="multipart/form-data">
+                    <label for="image_source">Image source :</label>
+                    <input type="file" id="image_source" name="image_source" accept="image/*" required>
 
-                <label for="nombre_pages">Nombre de pages du livre :</label>
-                <input type="number" id="nombre_pages" name="nombre_pages" value="579" min="2" required>
+                    <label for="nombre_pages">Nombre de pages du livre :</label>
+                    <input type="number" id="nombre_pages" name="nombre_pages" value="579" min="2" required>
 
-                <label for="hauteur_livre">Hauteur du livre (mm) :</label>
-                <input type="number" id="hauteur_livre" name="hauteur_livre" value="225.0" step="0.1" required>
+                    <label for="hauteur_livre">Hauteur du livre (mm) :</label>
+                    <input type="number" id="hauteur_livre" name="hauteur_livre" value="225.0" step="0.1" required>
 
-                <label for="largeur_tranche_etiree_cible">Largeur de la tranche imprimée (mm) :</label>
-                <input type="number" id="largeur_tranche_etiree_cible" name="largeur_tranche_etiree_cible" value="10.0" step="0.1" required>
+                    <label for="largeur_tranche_etiree_cible">Largeur de la tranche imprimée (mm) :</label>
+                    <input type="number" id="largeur_tranche_etiree_cible" name="largeur_tranche_etiree_cible" value="10.0" step="0.1" required>
 
-                <label for="debut_numero_tranche">Numéro de la première page :</label>
-                <input type="number" id="debut_numero_tranche" name="debut_numero_tranche" value="1" required>
-
-                <button type="submit">Générer le PDF</button>
-            </form>
+                    <label for="debut_numero_tranche">Numéro de la première page :</label>
+                    <input type="number" id="debut_numero_tranche" name="debut_numero_tranche" value="1" required>
+                    
+                    <button type="submit">Générer le PDF</button>
+                </form>
+            {% else %}
+                <p class="non-premium-message">Vous n'avez pas d'abonnement actif. <a href="{{ url_for('subscribe') }}">Abonnez-vous ici</a> pour accéder au générateur de PDF.</p>
+            {% endif %}
         {% else %}
             <p style="text-align: center;">Veuillez vous connecter ou vous inscrire pour utiliser le générateur.</p>
         {% endif %}

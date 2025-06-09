@@ -4,8 +4,9 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import shutil
-from datetime import datetime, date # Importe datetime et date
+from datetime import datetime, date, timedelta # Importe datetime, date, timedelta
 import secrets
+import functools # Importe functools pour wraps dans les décorateurs
 
 # Importez vos fonctions de traitement d'image depuis le dossier core_logic
 from core_logic.image_processing import generer_tranches_individuelles, generer_pdf_a_partir_tranches
@@ -35,13 +36,14 @@ login_manager.login_view = 'login'
 login_manager.login_message = 'Veuillez vous connecter pour accéder à cette page.'
 login_manager.login_message_category = 'info'
 
-# --- Modèle Utilisateur ---
+# --- Modèle Utilisateur (mis à jour avec is_admin et premium_until) ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    # CHANGEMENT ICI : Augmentation de la taille à 256 pour le password_hash
-    password_hash = db.Column(db.String(256), nullable=False) 
+    password_hash = db.Column(db.String(256), nullable=False) # Taille augmentée à 256
     is_premium = db.Column(db.Boolean, default=False)
+    is_admin = db.Column(db.Boolean, default=False) # Champ pour les administrateurs
+    premium_until = db.Column(db.Date, nullable=True) # Champ pour date de fin d'abonnement
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -71,15 +73,41 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# --- Fonctions utilitaires ---
+def admin_required(f):
+    """Décorateur pour exiger que l'utilisateur soit un administrateur."""
+    @login_required
+    @functools.wraps(f) # Utilise functools.wraps
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_admin:
+            flash("Accès non autorisé : Vous n'êtes pas un administrateur.", 'danger')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 # --- Routes de l'application ---
 @app.route('/')
 @login_required
 def index():
+    # Calculer les jours restants si premium
+    days_remaining = None
+    if current_user.is_premium and current_user.premium_until:
+        today = date.today()
+        if current_user.premium_until >= today:
+            days_remaining = (current_user.premium_until - today).days
+        else:
+            # Si la date est passée, l'abonnement a expiré
+            current_user.is_premium = False
+            current_user.premium_until = None # Réinitialise la date de fin
+            db.session.commit()
+            flash("Votre abonnement a expiré. Veuillez le renouveler.", 'danger')
+            return redirect(url_for('subscribe'))
+
     if not current_user.is_premium:
         flash("Vous devez avoir un abonnement actif pour utiliser le générateur.", 'info')
         return redirect(url_for('subscribe'))
     
-    return render_template('index.html', is_premium=current_user.is_premium, days_remaining=None)
+    return render_template('index.html', is_premium=current_user.is_premium, days_remaining=days_remaining)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -117,7 +145,7 @@ def register():
             flash('Cet email est déjà enregistré.', 'danger')
             return redirect(url_for('register'))
 
-        new_user = User(email=email, is_premium=False)
+        new_user = User(email=email, is_premium=False, is_admin=False) # Initialise is_admin
         new_user.set_password(password)
         db.session.add(new_user)
         db.session.commit()
@@ -151,6 +179,42 @@ def paypal_success():
 def paypal_cancel():
     flash('Paiement PayPal annulé. Vous pouvez réessayer.', 'info')
     return redirect(url_for('index'))
+
+# --- ROUTES D'ADMINISTRATION ---
+@app.route('/admin')
+@admin_required # Seuls les administrateurs peuvent y accéder
+def admin_dashboard():
+    users = User.query.all() # Récupère tous les utilisateurs
+    return render_template('admin.html', users=users)
+
+@app.route('/admin/toggle-premium/<int:user_id>', methods=['POST'])
+@admin_required # Seuls les administrateurs peuvent y accéder
+def admin_toggle_premium(user_id):
+    user = User.query.get_or_404(user_id)
+    user.is_premium = not user.is_premium # Inverse le statut premium
+    if user.is_premium:
+        # Définit la date de fin de l'abonnement à 30 jours à partir d'aujourd'hui
+        user.premium_until = date.today() + timedelta(days=30) 
+        flash(f"Compte '{user.email}' activé en mode Premium jusqu'au {user.premium_until} !", 'success')
+        print(f"ADMIN ACTION: {user.email} set to premium until {user.premium_until}.") # Log sur le serveur
+    else:
+        user.premium_until = None # Réinitialise la date de fin si désactivé
+        flash(f"Compte '{user.email}' désactivé du mode Premium.", 'info')
+        print(f"ADMIN ACTION: {user.email} set to non-premium.")
+
+    db.session.commit()
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/set-admin/<int:user_id>', methods=['POST'])
+@admin_required # Seuls les administrateurs peuvent y accéder
+def admin_set_admin(user_id):
+    user = User.query.get_or_404(user_id)
+    user.is_admin = not user.is_admin # Inverse le statut admin
+    db.session.commit()
+    flash(f"Statut administrateur de '{user.email}' changé à {user.is_admin}.", 'info')
+    print(f"ADMIN ACTION: {user.email} admin status set to {user.is_admin}.")
+    return redirect(url_for('admin_dashboard'))
+
 
 @app.route('/generate', methods=['POST'])
 @login_required
@@ -267,7 +331,4 @@ def generate_foreedge_form():
 
 if __name__ == '__main__':
     # La création de la base de données est maintenant gérée par le script init_db.py exécuté dans la Build Command de Render.
-    # Pour le développement local, si vous voulez que site.db soit créé/mis à jour, vous devrez l'exécuter manuellement via flask shell
-    # ou ajouter un appel conditionnel ici (par exemple, si os.environ.get('FLASK_ENV') == 'development').
-    # Pour la simplicité actuelle, le `db.create_all()` ne sera pas exécuté automatiquement ici en local.
     app.run(debug=True)
