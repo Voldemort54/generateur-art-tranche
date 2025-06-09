@@ -4,15 +4,14 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import shutil
-from datetime import datetime, date, timedelta # Importe datetime, date, timedelta
+from datetime import datetime, date, timedelta
 import secrets
-import functools # Importe functools pour wraps dans les décorateurs
+import functools
 
 # Importez vos fonctions de traitement d'image depuis le dossier core_logic
 from core_logic.image_processing import generer_tranches_individuelles, generer_pdf_a_partir_tranches
 
 app = Flask(__name__)
-# Clé secrète FIXE et forte. Utilisée aussi pour la route make-me-admin-temp pour la simplicité.
 app.secret_key = '04c3f5d7e8b2a196e0c7b4a1d8f3e9c2b7a6d5e4f3c2b1a0d9e8f7c6b5a4d3e2' 
 
 # --- Configuration de la base de données ---
@@ -37,7 +36,7 @@ login_manager.login_view = 'login'
 login_manager.login_message = 'Veuillez vous connecter pour accéder à cette page.'
 login_manager.login_message_category = 'info'
 
-# --- Modèle Utilisateur (mis à jour avec is_admin et premium_until) ---
+# --- Modèle Utilisateur ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -80,9 +79,10 @@ def admin_required(f):
     @login_required
     @functools.wraps(f) # Utilise functools.wraps
     def decorated_function(*args, **kwargs):
-        if not current_user.is_admin:
+        # Vérification double : doit être connecté ET admin
+        if not current_user.is_authenticated or not current_user.is_admin: 
             flash("Accès non autorisé : Vous n'êtes pas un administrateur.", 'danger')
-            return redirect(url_for('index'))
+            return redirect(url_for('index')) 
         return f(*args, **kwargs)
     return decorated_function
 
@@ -104,7 +104,9 @@ def index():
             flash("Votre abonnement a expiré. Veuillez le renouveler.", 'danger')
             return redirect(url_for('subscribe'))
 
-    if not current_user.is_premium:
+    # MODIFICATION CLÉ : Permettre aux admins d'accéder à l'index même s'ils ne sont pas premium.
+    # La redirection vers '/subscribe' ne se fera que si l'utilisateur n'est PAS premium ET n'est PAS admin.
+    if not current_user.is_premium and not current_user.is_admin: 
         flash("Vous devez avoir un abonnement actif pour utiliser le générateur.", 'info')
         return redirect(url_for('subscribe'))
     
@@ -146,7 +148,7 @@ def register():
             flash('Cet email est déjà enregistré.', 'danger')
             return redirect(url_for('register'))
 
-        new_user = User(email=email, is_premium=False, is_admin=False) # Initialise is_admin
+        new_user = User(email=email, is_premium=False, is_admin=False)
         new_user.set_password(password)
         db.session.add(new_user)
         db.session.commit()
@@ -181,26 +183,9 @@ def paypal_cancel():
     flash('Paiement PayPal annulé. Vous pouvez réessayer.', 'info')
     return redirect(url_for('index'))
 
-# --- ROUTE TEMPORAIRE POUR SE RENDRE ADMIN (À SUPPRIMER ABSOLUMENT APRÈS USAGE !) ---
-# Utilisez cette route UNE FOIS pour activer votre compte admin, PUIS SUPPRIMEZ-LA ENTIÈREMENT.
-# La clé secrète à vérifier est simplement app.secret_key pour la simplicité du débogage.
-@app.route('/make-me-admin-temp/<email_to_make_admin>/<temp_secret_key>')
-def make_me_admin_temp(email_to_make_admin, temp_secret_key):
-    # Comparaison avec app.secret_key (qui est '04c3f5d7e8b2a196e0c7b4a1d8f3e9c2b7a6d5e4f3c2b1a0d9e8f7c6b5a4d3e2')
-    if temp_secret_key == app.secret_key: 
-        user = User.query.filter_by(email=email_to_make_admin).first()
-        if user:
-            user.is_admin = True
-            db.session.commit()
-            flash(f"Compte '{email_to_make_admin}' est maintenant Administrateur. VEUILLEZ SUPPRIMER CETTE ROUTE IMMÉDIATEMENT APRÈS USAGE !", 'success')
-            print(f"ADMIN ACTION: {email_to_make_admin} set to admin. REMOVE THIS ROUTE!") # Log sur le serveur
-        else:
-            flash(f"Compte '{email_to_make_admin}' non trouvé.", 'danger')
-        return redirect(url_for('login'))
-    else:
-        flash("Accès refusé. Clé secrète temporaire incorrecte.", 'danger')
-        return redirect(url_for('login'))
-# --- FIN DE LA ROUTE TEMPORAIRE ---
+# --- ROUTE make-me-admin-temp SUPPRIMÉE ---
+# La route temporaire pour vous rendre admin a été retirée pour la sécurité.
+# Vous avez déjà votre compte admin, donc elle n'est plus nécessaire.
 
 
 # --- ROUTES D'ADMINISTRATION (Protégées) ---
