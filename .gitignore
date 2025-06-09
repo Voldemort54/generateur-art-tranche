@@ -1,0 +1,28 @@
+# Virtual environment
+venv/
+.env
+.flaskenv
+
+# Python cache and build files
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+
+# Database file
+*.db
+*.sqlite
+/site.db
+
+# Uploaded and generated files (Flask specific)
+uploads/
+generated_pdfs/
+temp_processing/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE specific files (e.g., VS Code)
+.vscode/

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur d'Art sur Tranche de Livre</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="file"],
+        input[type="text"],
+        input[type="number"],
+        input[type="email"],
+        input[type="password"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box; /* Inclut le padding dans la largeur */
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .flash-messages {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 20px;
+        }
+        .flash-messages li {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            border: 1px solid transparent;
+        }
+        .flash-messages li.success {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+        .flash-messages li.danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+        .flash-messages li.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border-color: #bee5eb;
+        }
+        .auth-links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .auth-links a {
+            color: #007bff;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .auth-links a:hover {
+            text-decoration: underline;
+        }
+        .user-info {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Créez votre Art sur Tranche</h1>
+
+        {% if current_user.is_authenticated %}
+        <p class="user-info">Connecté en tant que : <strong>{{ current_user.email }}</strong> | <a href="{{ url_for('logout') }}">Déconnexion</a></p>
+        {% else %}
+        <div class="auth-links">
+            <p><a href="{{ url_for('login') }}">Connexion</a> | <a href="{{ url_for('register') }}">Inscription</a></p>
+        </div>
+        {% endif %}
+
+        {# Affichage des messages flash (erreurs, succès, info) #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="flash-messages">
+            {% for category, message in messages %}
+              <li class="{{ category }}">{{ message }}</li>
+            {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        {% if current_user.is_authenticated %}
+            <form action="{{ url_for('generate_foreedge_form') }}" method="post" enctype="multipart/form-data">
+                <label for="image_source">Image source :</label>
+                <input type="file" id="image_source" name="image_source" accept="image/*" required>
+
+                <label for="nombre_pages">Nombre de pages du livre :</label>
+                <input type="number" id="nombre_pages" name="nombre_pages" value="579" min="2" required>
+
+                <label for="hauteur_livre">Hauteur du livre (mm) :</label>
+                <input type="number" id="hauteur_livre" name="hauteur_livre" value="225.0" step="0.1" required>
+
+                <label for="largeur_tranche_etiree_cible">Largeur de la tranche imprimée (mm) :</label>
+                <input type="number" id="largeur_tranche_etiree_cible" name="largeur_tranche_etiree_cible" value="10.0" step="0.1" required>
+
+                <label for="debut_numero_tranche">Numéro de la première page :</label>
+                <input type="number" id="debut_numero_tranche" name="debut_numero_tranche" value="1" required>
+
+                <button type="submit">Générer le PDF</button>
+            </form>
+        {% else %}
+            <p style="text-align: center;">Veuillez vous connecter ou vous inscrire pour utiliser le générateur.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
