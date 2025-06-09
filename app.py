@@ -13,8 +13,10 @@ from core_logic.image_processing import generer_tranches_individuelles, generer_
 app = Flask(__name__)
 app.secret_key = '04c3f5d7e8b2a196e0c7b4a1d8f3e9c2b7a6d5e4f3c2b1a0d9e8f7c6b5a4d3e2'
 
-# --- Configuration de la base de données SQLite ---
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+# --- Configuration de la base de données ---
+# Utilise une variable d'environnement 'DATABASE_URL' pour la connexion à la base de données en production (PostgreSQL sur Render)
+# Si 'DATABASE_URL' n'est pas définie (en développement local), utilise SQLite.
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///site.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -25,12 +27,13 @@ login_manager.login_view = 'login'
 login_manager.login_message = 'Veuillez vous connecter pour accéder à cette page.'
 login_manager.login_message_category = 'info'
 
-# --- Modèle Utilisateur (mis à jour pour PayPal) ---
+# --- Modèle Utilisateur ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    is_premium = db.Column(db.Boolean, default=False) # Nouveau champ pour le statut premium
+    is_premium = db.Column(db.Boolean, default=False) # Champ pour le statut premium
+    # premium_until = db.Column(db.Date, nullable=True) # Non utilisé dans cette version simplifiée de PayPal, mais gardé en mémoire pour une future extension
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -64,12 +67,12 @@ def allowed_file(filename):
 @app.route('/')
 @login_required
 def index():
-    # Si l'utilisateur est connecté mais n'est PAS premium, redirigez-le vers la page d'abonnement.
     if not current_user.is_premium:
         flash("Vous devez avoir un abonnement actif pour utiliser le générateur.", 'info')
         return redirect(url_for('subscribe'))
-    # Si l'utilisateur est premium, affiche la page d'accueil normale.
-    return render_template('index.html', is_premium=current_user.is_premium)
+    
+    # days_remaining = None # Non utilisé dans cette version simplifiée, mais gardé en mémoire pour une future extension
+    return render_template('index.html', is_premium=current_user.is_premium, days_remaining=None) # Passe days_remaining=None
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -83,7 +86,6 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             flash('Connexion réussie !', 'success')
-            # Après connexion, redirige vers l'index qui vérifiera le statut premium
             return redirect(url_for('index')) 
         else:
             flash('Email ou mot de passe incorrect.', 'danger')
@@ -108,7 +110,7 @@ def register():
             flash('Cet email est déjà enregistré.', 'danger')
             return redirect(url_for('register'))
 
-        new_user = User(email=email, is_premium=False) # Initialise à False
+        new_user = User(email=email, is_premium=False)
         new_user.set_password(password)
         db.session.add(new_user)
         db.session.commit()
@@ -125,17 +127,17 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route('/subscribe')
-@login_required # La page d'abonnement est accessible seulement si connecté
+@login_required
 def subscribe():
-    # L'utilisateur est ici pour s'abonner, on affiche la page de paiement.
-    return render_template('subscribe.html')
+    # L'URL du site est passée à la template pour les redirections PayPal
+    # L'URL complète de votre site déployé
+    site_base_url = "https://generateur-art-tranche.onrender.com" 
+    return render_template('subscribe.html', site_base_url=site_base_url)
 
 # Routes de retour de PayPal (succès/annulation)
 @app.route('/paypal-success')
 @login_required
 def paypal_success():
-    # Flash message pour l'utilisateur.
-    # Le statut 'is_premium' n'est PAS mis à jour automatiquement ici sans IPN.
     flash('Paiement PayPal réussi ! Votre statut Premium sera activé sous peu.', 'success')
     flash('Veuillez noter que l\'activation peut prendre un moment ou nécessiter une vérification manuelle. Contactez l\'administrateur si nécessaire.', 'info')
     return redirect(url_for('index'))
@@ -149,8 +151,6 @@ def paypal_cancel():
 @app.route('/generate', methods=['POST'])
 @login_required
 def generate_foreedge_form():
-    # Cette vérification est toujours ici pour double sécurité au cas où un utilisateur
-    # essaierait d'accéder directement à l'URL /generate sans passer par l'index.
     if not current_user.is_premium: 
         flash("Vous devez avoir un abonnement actif pour générer des PDFs.", 'danger')
         return redirect(url_for('subscribe'))
@@ -265,7 +265,8 @@ if __name__ == '__main__':
     with app.app_context(): # Nécessaire pour créer la base de données
         # Supprime la base de données existante pour la recréer avec le nouveau modèle
         # Ne faites cela qu'en DÉVELOPPEMENT. En PRODUCTION, vous ferez une migration.
-        if os.path.exists('site.db'):
-            os.remove('site.db')
-        db.create_all() # Crée la base de données et les tables si elles n'existent pas
+        # if os.path.exists('site.db'): # Cette ligne est commentée car la recréation se fait via shell
+        #     os.remove('site.db') 
+        # db.create_all() # Cette ligne est commentée car la recréation se fait via shell
+        pass # Aucune action n'est nécessaire ici car db.create_all() est appelé via le shell Render
     app.run(debug=True)
