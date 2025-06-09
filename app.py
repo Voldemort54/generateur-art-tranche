@@ -7,10 +7,8 @@ import shutil
 from datetime import datetime, date, timedelta
 import secrets
 import functools
-# import hmac # N'est plus nécessaire pour cette méthode de vérification
-# import hashlib # N'est plus nécessaire pour cette méthode de vérification
 import json
-import requests # NOUVEAU: Pour faire des requêtes HTTP à l'API PayPal
+import requests
 
 # Importez vos fonctions de traitement d'image depuis le dossier core_logic
 from core_logic.image_processing import generer_tranches_individuelles, generer_pdf_a_partir_tranches
@@ -375,6 +373,12 @@ PAYPAL_API_SECRET = os.environ.get('PAYPAL_API_SECRET')
 # pour le passer à l'API de vérification.
 PAYPAL_WEBHOOK_ID_CONFIGURED = os.environ.get('PAYPAL_WEBHOOK_ID') # Ce n'est PAS un secret
 
+# MODIFICATION CLÉ : L'URL de base de l'API PayPal est maintenant une variable d'environnement
+# Utilisez 'https://api-m.paypal.com' pour la production
+# Utilisez 'https://api-m.sandbox.paypal.com' pour le sandbox
+PAYPAL_API_BASE_URL = os.environ.get('PAYPAL_API_BASE_URL', 'https://api-m.sandbox.paypal.com') # Valeur par défaut pour le dev/test
+
+
 @app.route('/paypal-webhook', methods=['POST'])
 def paypal_webhook():
     # Vérifier si les identifiants API nécessaires sont définis
@@ -408,10 +412,8 @@ def paypal_webhook():
             "webhook_event": event # Le corps complet de l'événement webhook
         }
 
-        # Définir l'URL de l'API de vérification (Sandbox ou Live)
-        # Pour le développement/test: https://api-m.sandbox.paypal.com
-        # Pour la production: https://api-m.paypal.com
-        paypal_api_base_url = "https://api-m.sandbox.paypal.com" # Changez ceci pour "https://api-m.paypal.com" en production
+        # MODIFICATION CLÉ : Utiliser la variable PAYPAL_API_BASE_URL
+        paypal_api_base_url = PAYPAL_API_BASE_URL 
 
         # Obtenir un token d'accès (Bearer token)
         auth_response = requests.post(
