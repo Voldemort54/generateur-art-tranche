@@ -14,7 +14,6 @@ app = Flask(__name__)
 app.secret_key = '04c3f5d7e8b2a196e0c7b4a1d8f3e9c2b7a6d5e4f3c2b1a0d9e8f7c6b5a4d3e2'
 
 # --- Configuration de la base de données ---
-# AJOUT DES LIGNES DE DÉBOGAGE ICI
 db_uri_env = os.environ.get('DATABASE_URL')
 print(f"DEBUG: DATABASE_URL from environment: {db_uri_env}")
 if db_uri_env:
@@ -40,7 +39,8 @@ login_manager.login_message_category = 'info'
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    # CHANGEMENT ICI : Augmentation de la taille à 256 pour le password_hash
+    password_hash = db.Column(db.String(256), nullable=False) 
     is_premium = db.Column(db.Boolean, default=False)
 
     def set_password(self, password):
