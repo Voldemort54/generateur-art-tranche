@@ -7,18 +7,24 @@ import shutil
 from datetime import datetime, date, timedelta
 import secrets
 import functools
+# import hmac # N'est plus nécessaire pour cette méthode de vérification
+# import hashlib # N'est plus nécessaire pour cette méthode de vérification
+import json
+import requests # NOUVEAU: Pour faire des requêtes HTTP à l'API PayPal
 
 # Importez vos fonctions de traitement d'image depuis le dossier core_logic
 from core_logic.image_processing import generer_tranches_individuelles, generer_pdf_a_partir_tranches
 
 app = Flask(__name__)
-app.secret_key = '04c3f5d7e8b2a196e0c7b4a1d8f3e9c2b7a6d5e4f3c2b1a0d9e8f7c6b5a4d3e2' 
+
+# MODIFICATION CLÉ: Lire la clé secrète depuis les variables d'environnement
+app.secret_key = os.environ.get('SECRET_KEY', 'votre_cle_secrete_de_secours_ici_pour_dev_seulement')
 
 # --- Configuration de la base de données ---
 db_uri_env = os.environ.get('DATABASE_URL')
 print(f"DEBUG: DATABASE_URL from environment: {db_uri_env}")
 if db_uri_env:
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri_env
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri_env.replace("postgres://", "postgresql://", 1) # Correction pour SQLAlchemy 2.0
     print("DEBUG: Using DATABASE_URL from environment.")
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
@@ -173,6 +179,8 @@ def subscribe():
 @app.route('/paypal-success')
 @login_required
 def paypal_success():
+    # Vous pouvez récupérer le subscription_id ici: request.args.get('subscription_id')
+    # Pour le moment, l'activation est manuelle, donc juste un message de succès
     flash('Paiement PayPal réussi ! Votre statut Premium sera activé sous peu.', 'success')
     flash('Veuillez noter que l\'activation peut prendre un moment ou nécessiter une vérification manuelle. Contactez l\'administrateur si nécessaire.', 'info')
     return redirect(url_for('index'))
@@ -182,10 +190,6 @@ def paypal_success():
 def paypal_cancel():
     flash('Paiement PayPal annulé. Vous pouvez réessayer.', 'info')
     return redirect(url_for('index'))
-
-# --- ROUTE make-me-admin-temp SUPPRIMÉE ---
-# La route temporaire pour vous rendre admin a été retirée pour la sécurité.
-# Vous avez déjà votre compte admin, donc elle n'est plus nécessaire.
 
 
 # --- ROUTES D'ADMINISTRATION (Protégées) ---
@@ -227,7 +231,7 @@ def admin_set_admin(user_id):
 @app.route('/generate', methods=['POST'])
 @login_required
 def generate_foreedge_form():
-    if not current_user.is_premium: 
+    if not current_user.is_premium and not current_user.is_admin: # L'admin peut aussi générer
         flash("Vous devez avoir un abonnement actif pour générer des PDFs.", 'danger')
         return redirect(url_for('subscribe'))
 
@@ -250,8 +254,14 @@ def generate_foreedge_form():
     unique_filename = f"{original_filename_base}_{timestamp}{original_filename_ext}"
     filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
     
+    # Chemin pour le PDF généré (dans le dossier prévu à cet effet)
+    pdf_output_filename = f"foreedge_pattern_{timestamp}.pdf"
+    pdf_final_path = os.path.join(GENERATED_PDF_FOLDER, pdf_output_filename)
+
     temp_tranches_dir = os.path.join(TEMP_PROCESSING_FOLDER, f"session_{timestamp}_{secrets.token_hex(8)}")
     os.makedirs(temp_tranches_dir, exist_ok=True)
+
+    response = None # Initialise la variable de réponse
 
     try:
         file.save(filepath)
@@ -260,15 +270,15 @@ def generate_foreedge_form():
             hauteur_livre = float(request.form['hauteur_livre'])
             if hauteur_livre <= 0:
                 raise ValueError("La hauteur du livre doit être une valeur positive.")
-            
+                
             nombre_pages = int(request.form['nombre_pages'])
             if nombre_pages < 2:
                 raise ValueError("Le nombre de pages doit être d'au moins 2.")
-            
+                
             largeur_tranche_etiree_cible = float(request.form['largeur_tranche_etiree_cible'])
             if largeur_tranche_etiree_cible <= 0:
                 raise ValueError("La largeur de la tranche imprimée doit être une valeur positive.")
-            
+                
             debut_numero_tranche = int(request.form['debut_numero_tranche'])
             
             pas_numero_tranche = 2 
@@ -289,7 +299,7 @@ def generate_foreedge_form():
             nombre_pages_livre=nombre_pages,
             dpi_utilise=dpi_utilise,
             largeur_tranche_etiree_cible_mm=largeur_tranche_etiree_cible,
-            progress_callback=lambda val, msg: None
+            progress_callback=lambda val, msg: None # Pas de callback de progression pour le web synchrone
         )
 
         if erreur_tranches:
@@ -300,41 +310,197 @@ def generate_foreedge_form():
             flash("Échec inattendu lors de la génération des tranches (aucun dossier retourné).", 'danger')
             return redirect(url_for('index'))
 
-        pdf_final_path, erreur_pdf = generer_pdf_a_partir_tranches(
+        # MODIFICATION: Passer le chemin de sortie final du PDF à la fonction de génération de PDF
+        pdf_final_path_actual, erreur_pdf = generer_pdf_a_partir_tranches(
             dossier_tranches_source=dossier_tranches_genere,
             hauteur_livre_mm_pdf=hauteur_livre, 
             largeur_tranche_etiree_cible_mm_pdf=largeur_tranche_etiree_cible,
             debut_numero_tranche=debut_numero_tranche,
             pas_numero_tranche=pas_numero_tranche,
-            progress_callback=lambda val, msg: None,
+            progress_callback=lambda val, msg: None, # Pas de callback de progression pour le web synchrone
             image_source_original_path=filepath,
-            nombre_pages_livre_original=nombre_pages
+            nombre_pages_livre_original=nombre_pages,
+            output_pdf_path=pdf_final_path # NOUVEAU PARAMÈTRE: chemin où enregistrer le PDF
         )
 
         if erreur_pdf:
             flash(f"Erreur lors de la génération du PDF : {erreur_pdf}", 'danger')
             return redirect(url_for('index'))
         
-        if not pdf_final_path:
+        if not pdf_final_path_actual:
             flash("Échec inattendu lors de la génération du PDF (aucun chemin retourné).", 'danger')
             return redirect(url_for('index'))
 
-        download_path = pdf_final_path 
-        
         flash('Votre PDF a été généré avec succès !', 'success')
-        return send_file(download_path, as_attachment=True, download_name=os.path.basename(download_path))
+        
+        # Capture la réponse pour s'assurer que le fichier est envoyé avant le nettoyage
+        response = send_file(pdf_final_path_actual, as_attachment=True, download_name=os.path.basename(pdf_final_path_actual))
+        return response
 
     except Exception as e:
         flash(f"Une erreur inattendue est survenue : {e}", 'danger')
+        print(f"Erreur inattendue dans /generate: {e}") # Log d'erreur détaillé
         return redirect(url_for('index'))
     finally:
+        # Nettoyage de l'image source téléchargée
         if os.path.exists(filepath): 
-            os.remove(filepath)
+            try:
+                os.remove(filepath)
+                print(f"DEBUG: Fichier source '{filepath}' supprimé.")
+            except OSError as e:
+                print(f"Erreur lors du nettoyage du fichier source '{filepath}': {e}")
+        
+        # Nettoyage du dossier temporaire des tranches
         if os.path.exists(temp_tranches_dir): 
             try:
                 shutil.rmtree(temp_tranches_dir)
-            except Exception as e:
-                print(f"Erreur lors du nettoyage du dossier temporaire {temp_tranches_dir}: {e}")
+                print(f"DEBUG: Dossier temporaire des tranches '{temp_tranches_dir}' supprimé.")
+            except OSError as e:
+                print(f"Erreur lors du nettoyage du dossier temporaire '{temp_tranches_dir}': {e}")
+        
+        # NOUVEAU: Nettoyage du PDF final généré
+        # Il est essentiel de supprimer le PDF après l'envoi pour éviter la saturation du disque sur Render.
+        if 'pdf_final_path' in locals() and os.path.exists(pdf_final_path):
+            try:
+                os.remove(pdf_final_path)
+                print(f"DEBUG: Fichier PDF généré '{pdf_final_path}' supprimé après envoi.")
+            except OSError as e:
+                print(f"Erreur lors du nettoyage du fichier PDF généré '{pdf_final_path}': {e}")
+
+# NOUVEAU: Variables d'environnement pour l'API PayPal (Client ID et Secret)
+PAYPAL_CLIENT_ID = os.environ.get('PAYPAL_CLIENT_ID')
+PAYPAL_API_SECRET = os.environ.get('PAYPAL_API_SECRET')
+# L'ID du webhook (webhook_id) est fourni par PayPal dans les en-têtes du webhook,
+# mais vous devez aussi le récupérer lors de la création du webhook dans votre tableau de bord
+# pour le passer à l'API de vérification.
+PAYPAL_WEBHOOK_ID_CONFIGURED = os.environ.get('PAYPAL_WEBHOOK_ID') # Ce n'est PAS un secret
+
+@app.route('/paypal-webhook', methods=['POST'])
+def paypal_webhook():
+    # Vérifier si les identifiants API nécessaires sont définis
+    if not PAYPAL_CLIENT_ID or not PAYPAL_API_SECRET or not PAYPAL_WEBHOOK_ID_CONFIGURED:
+        print("Erreur: Identifiants API PayPal (CLIENT_ID, API_SECRET ou WEBHOOK_ID) non définis. Impossible de vérifier le webhook.")
+        # Important : renvoyer un 200 OK pour ne pas désactiver le webhook chez PayPal,
+        # mais loguer l'erreur côté serveur.
+        return jsonify({"status": "error", "message": "PayPal API credentials missing"}), 200
+
+    try:
+        # Obtenir les en-têtes nécessaires à la vérification
+        transmission_id = request.headers.get('Paypal-Transmission-Id')
+        timestamp = request.headers.get('Paypal-Transmission-Time')
+        # La signature est envoyée par PayPal dans l'en-tête, mais nous ne la vérifions pas directement ici
+        # car nous utilisons l'API de vérification.
+        paypal_transmission_sig = request.headers.get('Paypal-Transmission-Sig') # Toujours la récupérer
+
+        # Récupérer le corps de la requête JSON
+        request_body = request.data.decode('utf-8')
+        event = json.loads(request_body)
+
+        # Construire le payload pour l'API de vérification de webhook de PayPal
+        # Utiliser l'ID du webhook configuré sur PayPal
+        verification_payload = {
+            "webhook_id": PAYPAL_WEBHOOK_ID_CONFIGURED,
+            "transmission_id": transmission_id,
+            "transmission_time": timestamp,
+            "cert_url": request.headers.get('Paypal-Cert-Url'), # URL du certificat PayPal
+            "auth_algo": request.headers.get('Paypal-Auth-Algo'), # Algorithme d'authentification
+            "transmission_sig": paypal_transmission_sig, # Signature fournie par PayPal
+            "webhook_event": event # Le corps complet de l'événement webhook
+        }
+
+        # Définir l'URL de l'API de vérification (Sandbox ou Live)
+        # Pour le développement/test: https://api-m.sandbox.paypal.com
+        # Pour la production: https://api-m.paypal.com
+        paypal_api_base_url = "https://api-m.sandbox.paypal.com" # Changez ceci pour "https://api-m.paypal.com" en production
+
+        # Obtenir un token d'accès (Bearer token)
+        auth_response = requests.post(
+            f"{paypal_api_base_url}/v1/oauth2/token",
+            auth=(PAYPAL_CLIENT_ID, PAYPAL_API_SECRET),
+            data={"grant_type": "client_credentials"}
+        )
+        auth_response.raise_for_status() # Lève une exception pour les codes d'état d'erreur HTTP
+        access_token = auth_response.json().get("access_token")
+
+        if not access_token:
+            print("Erreur: Impossible d'obtenir le token d'accès PayPal.")
+            return jsonify({"status": "error", "message": "Failed to get PayPal access token"}), 500
+
+        # Appel à l'API de vérification de webhook de PayPal
+        verify_response = requests.post(
+            f"{paypal_api_base_url}/v1/notifications/verify-webhook-signature",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {access_token}"
+            },
+            json=verification_payload
+        )
+        verify_response.raise_for_status() # Lève une exception pour les codes d'état d'erreur HTTP
+        verification_status = verify_response.json().get("verification_status")
+
+        if verification_status != 'SUCCESS':
+            print(f"Échec de la vérification du webhook PayPal: {verification_status}")
+            return jsonify({"status": "error", "message": "Webhook verification failed", "details": verification_status}), 403 # Forbidden
+
+        print(f"Webhook PayPal vérifié avec succès: {verification_status}")
+
+        # Traiter l'événement après vérification réussie
+        event_type = event.get('event_type')
+        resource = event.get('resource')
+
+        print(f"Webhook PayPal reçu: Type d'événement: {event_type}")
+
+        if event_type == 'BILLING.SUBSCRIPTION.ACTIVATED':
+            subscription_id = resource.get('id')
+            subscriber_email = resource.get('subscriber', {}).get('email_address')
+
+            if subscriber_email:
+                user = User.query.filter_by(email=subscriber_email).first()
+                if user:
+                    user.is_premium = True
+                    user.premium_until = date.today() + timedelta(days=30)
+                    db.session.commit()
+                    print(f"Utilisateur {user.email} abonnement activé via webhook. Subscription ID: {subscription_id}")
+                    return jsonify({"status": "success", "message": "Subscription activated"}), 200
+                else:
+                    print(f"Utilisateur non trouvé pour l'email {subscriber_email} (activation).")
+                    return jsonify({"status": "error", "message": "User not found"}), 404
+            else:
+                print("Email de l'abonné non trouvé dans le webhook d'activation.")
+                return jsonify({"status": "error", "message": "Subscriber email not found"}), 400
+
+        elif event_type == 'BILLING.SUBSCRIPTION.CANCELLED':
+            subscription_id = resource.get('id')
+            subscriber_email = resource.get('subscriber', {}).get('email_address')
+            if subscriber_email:
+                user = User.query.filter_by(email=subscriber_email).first()
+                if user:
+                    user.is_premium = False
+                    user.premium_until = None
+                    db.session.commit()
+                    print(f"Utilisateur {user.email} abonnement annulé via webhook. Subscription ID: {subscription_id}")
+                    return jsonify({"status": "success", "message": "Subscription cancelled"}), 200
+                else:
+                    print(f"Utilisateur non trouvé pour l'email {subscriber_email} (annulation).")
+                    return jsonify({"status": "error", "message": "User not found for cancellation"}), 404
+            else:
+                print("Email de l'abonné non trouvé dans le webhook d'annulation.")
+                return jsonify({"status": "error", "message": "Subscriber email not found for cancellation"}), 400
+
+        # Gérer d'autres types d'événements si nécessaire
+        else:
+            print(f"Type d'événement non géré par cette logique: {event_type}")
+            return jsonify({"status": "success", "message": "Event received but not processed"}), 200 # Toujours renvoyer 200 pour les événements non gérés
+
+    except json.JSONDecodeError:
+        print("Erreur: Corps de requête du webhook non valide JSON.")
+        return jsonify({"status": "error", "message": "Invalid JSON in request body"}), 400
+    except requests.exceptions.RequestException as req_e:
+        print(f"Erreur lors de l'appel à l'API PayPal: {req_e}")
+        return jsonify({"status": "error", "message": f"PayPal API communication error: {req_e}"}), 500
+    except Exception as e:
+        print(f"Erreur inattendue lors du traitement du webhook PayPal: {e}")
+        return jsonify({"status": "error", "message": f"Internal server error: {e}"}), 500
 
 
 if __name__ == '__main__':
