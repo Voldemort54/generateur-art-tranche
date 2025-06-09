@@ -12,7 +12,8 @@ import functools # Importe functools pour wraps dans les décorateurs
 from core_logic.image_processing import generer_tranches_individuelles, generer_pdf_a_partir_tranches
 
 app = Flask(__name__)
-app.secret_key = '04c3f5d7e8b2a196e0c7b4a1d8f3e9c2b7a6d5e4f3c2b1a0d9e8f7c6b5a4d3e2'
+# Clé secrète FIXE et forte. Utilisée aussi pour la route make-me-admin-temp pour la simplicité.
+app.secret_key = '04c3f5d7e8b2a196e0c7b4a1d8f3e9c2b7a6d5e4f3c2b1a0d9e8f7c6b5a4d3e2' 
 
 # --- Configuration de la base de données ---
 db_uri_env = os.environ.get('DATABASE_URL')
@@ -180,7 +181,29 @@ def paypal_cancel():
     flash('Paiement PayPal annulé. Vous pouvez réessayer.', 'info')
     return redirect(url_for('index'))
 
-# --- ROUTES D'ADMINISTRATION ---
+# --- ROUTE TEMPORAIRE POUR SE RENDRE ADMIN (À SUPPRIMER ABSOLUMENT APRÈS USAGE !) ---
+# Utilisez cette route UNE FOIS pour activer votre compte admin, PUIS SUPPRIMEZ-LA ENTIÈREMENT.
+# La clé secrète à vérifier est simplement app.secret_key pour la simplicité du débogage.
+@app.route('/make-me-admin-temp/<email_to_make_admin>/<temp_secret_key>')
+def make_me_admin_temp(email_to_make_admin, temp_secret_key):
+    # Comparaison avec app.secret_key (qui est '04c3f5d7e8b2a196e0c7b4a1d8f3e9c2b7a6d5e4f3c2b1a0d9e8f7c6b5a4d3e2')
+    if temp_secret_key == app.secret_key: 
+        user = User.query.filter_by(email=email_to_make_admin).first()
+        if user:
+            user.is_admin = True
+            db.session.commit()
+            flash(f"Compte '{email_to_make_admin}' est maintenant Administrateur. VEUILLEZ SUPPRIMER CETTE ROUTE IMMÉDIATEMENT APRÈS USAGE !", 'success')
+            print(f"ADMIN ACTION: {email_to_make_admin} set to admin. REMOVE THIS ROUTE!") # Log sur le serveur
+        else:
+            flash(f"Compte '{email_to_make_admin}' non trouvé.", 'danger')
+        return redirect(url_for('login'))
+    else:
+        flash("Accès refusé. Clé secrète temporaire incorrecte.", 'danger')
+        return redirect(url_for('login'))
+# --- FIN DE LA ROUTE TEMPORAIRE ---
+
+
+# --- ROUTES D'ADMINISTRATION (Protégées) ---
 @app.route('/admin')
 @admin_required # Seuls les administrateurs peuvent y accéder
 def admin_dashboard():
