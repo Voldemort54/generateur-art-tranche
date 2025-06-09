@@ -106,8 +106,10 @@ def generer_tranches_individuelles(chemin_image_source, hauteur_livre_mm, nombre
 
 
 # --- Partie 2: Logique de génération du PDF ---
+# MODIFICATION: Ajout de l'argument 'output_pdf_path' à la signature de la fonction
 def generer_pdf_a_partir_tranches(dossier_tranches_source, hauteur_livre_mm_pdf, largeur_tranche_etiree_cible_mm_pdf,
-                                  debut_numero_tranche, pas_numero_tranche, progress_callback, image_source_original_path, nombre_pages_livre_original):
+                                  debut_numero_tranche, pas_numero_tranche, progress_callback, image_source_original_path, nombre_pages_livre_original,
+                                  output_pdf_path): # NOUVEL ARGUMENT ICI !
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.pdfgen import canvas
@@ -124,9 +126,8 @@ def generer_pdf_a_partir_tranches(dossier_tranches_source, hauteur_livre_mm_pdf,
 
     num_total_tranches_source = len(fichiers_tranches)
 
-    # Le chemin du PDF sera géré par l'appelant (app.py) pour le dossier de sortie.
-    pdf_filename = f"generated_foreedge_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.pdf" # Utilisation de datetime.now()
-    chemin_fichier_pdf = os.path.join(dossier_tranches_source, pdf_filename)
+    # MODIFICATION: Utiliser le chemin 'output_pdf_path' fourni par l'appelant (app.py)
+    chemin_fichier_pdf = output_pdf_path
 
 
     c = canvas.Canvas(chemin_fichier_pdf, pagesize=A4)
@@ -134,7 +135,7 @@ def generer_pdf_a_partir_tranches(dossier_tranches_source, hauteur_livre_mm_pdf,
 
 
     # Marges fixes
-    MARGE_HORIZONTALE_PAGE_MM = 10 
+    MARGE_HORIZONTALE_PAGE_MM = 10
     MARGE_VERTICALE_HAUT_PAGE_MM = 12 # Marge supérieure
     MARGE_VERTICALE_BAS_PAGE_MM = 7 # Marge inférieure
 
@@ -146,15 +147,15 @@ def generer_pdf_a_partir_tranches(dossier_tranches_source, hauteur_livre_mm_pdf,
     TEXTE_COPYRIGHT = "© Voldemort" # Texte du copyright
 
     # Marges INTERNES aux cadres de chaque tranche.
-    MARGE_INTERNE_TRANCHE_HORIZONTALE_GAUCHE_MM = 5 
-    MARGE_INTERNE_TRANCHE_HORIZONTALE_DROITE_MM = 5 
+    MARGE_INTERNE_TRANCHE_HORIZONTALE_GAUCHE_MM = 5
+    MARGE_INTERNE_TRANCHE_HORIZONTALE_DROITE_MM = 5
 
     # Largeur disponible pour le contenu sur la page PDF (en points)
     largeur_contenu_disponible_pt = largeur_page - (2 * MARGE_HORIZONTALE_PAGE_MM * mm)
     hauteur_contenu_disponible_pt = hauteur_page - (MARGE_VERTICALE_HAUT_PAGE_MM + MARGE_VERTICALE_BAS_PAGE_MM) * mm
 
     # Longueur du trait du repère vertical (s'étend au-dessus et en dessous du cadre)
-    LONGUEUR_REPERE_VERTICAL_MM = 3 
+    LONGUEUR_REPERE_VERTICAL_MM = 3
     REPERE_OFFSET_Y_MM = 2 # Distance du cadre pour les repères verticaux
 
 
@@ -264,7 +265,7 @@ def generer_pdf_a_partir_tranches(dossier_tranches_source, hauteur_livre_mm_pdf,
     c.setLineWidth(EPAISSEUR_LIGNE_DECOUPE)
 
     # La ligne du haut du cadre global est à la marge haute de la page.
-    y_global_top_line_page = hauteur_page - MARGE_VERTICALE_HAUT_PAGE_MM * mm 
+    y_global_top_line_page = hauteur_page - MARGE_VERTICALE_HAUT_PAGE_MM * mm
     c.line(MARGE_HORIZONTALE_PAGE_MM * mm, y_global_top_line_page, largeur_page - MARGE_HORIZONTALE_PAGE_MM * mm, y_global_top_line_page)
 
 
@@ -298,7 +299,7 @@ def generer_pdf_a_partir_tranches(dossier_tranches_source, hauteur_livre_mm_pdf,
             x_pos_frame_bottom_left = MARGE_HORIZONTALE_PAGE_MM * mm + (colonne_actuelle_sur_page * largeur_totale_par_tranche_bloc)
 
             # La hauteur du cadre est EXACTEMENT la hauteur du livre.
-            frame_height = hauteur_livre_mm_pdf * mm 
+            frame_height = hauteur_livre_mm_pdf * mm
             y_pos_frame_bottom_left = y_global_top_line_page - frame_height
 
             frame_width = largeur_tranche_etiree_cible_mm_pdf * mm + MARGE_INTERNE_TRANCHE_HORIZONTALE_GAUCHE_MM * mm + MARGE_INTERNE_TRANCHE_HORIZONTALE_DROITE_MM * mm
@@ -327,69 +328,20 @@ def generer_pdf_a_partir_tranches(dossier_tranches_source, hauteur_livre_mm_pdf,
             # Le X est 0 pour le début du texte.
             x_pos_numero_rot = 0
             y_pos_numero_rot = -texte_largeur_numero_pt / 2
-            c.drawString(x_pos_numero_rot, y_pos_numero_rot, texte_numero) 
+            c.drawString(x_pos_numero_rot, y_pos_numero_rot, texte_numero)
 
             # --- Dessiner le Copyright à la suite du Numéro ---
             c.setFont('Helvetica', TAILLE_POLICE_COPYRIGHT)
             texte_copyright_a_afficher = TEXTE_COPYRIGHT
             texte_largeur_copyright_pt = c.stringWidth(texte_copyright_a_afficher, 'Helvetica', TAILLE_POLICE_COPYRIGHT)
 
-            # Calculer la position pour le copyright.
-            # Dans le système roté à 270 degrés :
-            # L'axe X pointe vers le bas. L'axe Y pointe vers la gauche.
-            # Le numéro se termine à (x_pos_numero_rot, y_pos_numero_rot + texte_largeur_numero_pt).
-            # Pour que le copyright soit *à la suite* du numéro (donc plus bas sur la tranche),
-            # nous devons le décaler sur l'axe X roté.
-
-            # La "longueur" du numéro (sa hauteur une fois tourné) est texte_largeur_numero_pt.
-            # Nous voulons que le copyright commence après cette longueur, plus un petit espace.
             espacement_mm = 2 # 2 mm d'espacement entre le numéro et le copyright
             espacement_pt = espacement_mm * mm # Convertir en points
-
-            # La nouvelle position X pour le copyright est le décalage sur l'axe X roté (vers le bas)
-            # à partir du point où le numéro a été dessiné.
-            # Il commence après la longueur effective du numéro + l'espacement.
-            # Comme drawString dessine depuis la gauche (dans son système local),
-            # nous devons décaler sa position de départ.
-
-            # C'est la position *relative* sur l'axe Y du système roté.
-            # On veut qu'il soit après le numéro, donc on ajoute sa longueur (qui est texte_largeur_numero_pt)
-            # et un espacement.
-            y_pos_copyright_start_rot = y_pos_numero_rot + texte_largeur_numero_pt + espacement_pt
-
-            # Le dessin du copyright est centré verticalement par rapport à l'axe X roté.
-            # Donc, sa position Y locale reste la même que celle du numéro.
-            # Le décalage se fait sur X, pour qu'il soit sur la même ligne (verticale) que le numéro.
-            # Pour le centrer sur la ligne de base du numéro :
-            # Y local pour le copyright
-            y_pos_copyright_local_centered = y_pos_numero_rot + (texte_largeur_numero_pt / 2) - (texte_largeur_copyright_pt / 2)
-
-            # Position X locale pour le copyright. C'est la position où il commence.
-            # On veut qu'il soit après le numéro, donc on décale sur l'axe X (vers le bas de la tranche).
-            # On utilise texte_largeur_numero_pt car c'est la "hauteur" du numéro après rotation.
-
-            # Point de départ du copyright sur l'axe vertical (X roté)
-            # Il doit être juste après la fin du numéro (qui est à x_pos_numero_rot + texte_largeur_numero_pt / 2)
-            # On ajoute un espace.
-            # Et on centre le copyright sur cette nouvelle position.
-
-            # Point de départ du texte (où la "plume" commence)
-            # x est l'axe qui va "vers le bas" de la tranche (après 270 deg)
-            # y est l'axe qui va "vers la gauche" de la tranche (après 270 deg)
-
-            # Pour qu'il soit après le numéro, on le décale sur l'axe x (roté).
-            # Le numéro commence à 0 sur l'axe x roté. Sa "hauteur" est texte_largeur_numero_pt.
-            # Donc, il se termine à texte_largeur_numero_pt / 2 sur l'axe x roté.
-
-            # On doit positionner le copyright.
-            # Le texte est dessiné de gauche à droite. Quand tourné 270, c'est de haut en bas.
-            # Donc l'axe X est "vers le bas".
 
             # Positionnement du copyright après le numéro sur l'axe "X roté" (vers le bas)
             x_pos_for_copyright_rot = x_pos_numero_rot + texte_largeur_numero_pt + espacement_pt
 
             # Centrage sur l'axe "Y roté" (gauche/droite)
-            # Le numéro est centré à -texte_largeur_numero_pt / 2. On garde cette logique.
             y_pos_for_copyright_rot = y_pos_numero_rot # Le même centrage que le numéro
 
             # Dessiner le copyright avec les positions calculées dans le système roté.
@@ -410,13 +362,12 @@ def generer_pdf_a_partir_tranches(dossier_tranches_source, hauteur_livre_mm_pdf,
             center_x_image_tranche = x_pos_image + (largeur_tranche_etiree_cible_mm_pdf * mm / 2)
 
             # Repère du HAUT (au-dessus du cadre)
-
             c.line(center_x_image_tranche, y_pos_frame_bottom_left + frame_height + REPERE_OFFSET_Y_MM * mm,
                    center_x_image_tranche, y_pos_frame_bottom_left + frame_height + REPERE_OFFSET_Y_MM * mm + LONGUEUR_REPERE_VERTICAL_MM * mm)
 
             # Repère du BAS (en dessous du cadre)
             c.line(center_x_image_tranche, y_pos_frame_bottom_left - REPERE_OFFSET_Y_MM * mm,
-                   center_x_image_tranche, y_pos_frame_bottom_left - REPERE_OFFSET_Y_MM * mm - LONGUEUR_REPERE_VERTICAL_MM * mm)
+                   center_x_image_tranche, y_pos_frame_bottom_left - REPERE_OFFSET_Y_Y_MM * mm - LONGUEUR_REPERE_VERTICAL_MM * mm)
             # --- FIN DES REPÈRES ---
 
             tranche_actuelle_index_globale += 1
@@ -442,7 +393,7 @@ def generer_pdf_a_partir_tranches(dossier_tranches_source, hauteur_livre_mm_pdf,
     c.line(MARGE_HORIZONTALE_PAGE_MM * mm, y_global_bottom_line_page, largeur_page - MARGE_HORIZONTALE_PAGE_MM * mm, y_global_bottom_line_page)
 
 
-    c.save()
+    c.save() # Le PDF est sauvegardé au chemin 'output_pdf_path'
 
     if progress_callback:
         progress_callback(100, "PDF généré !")
