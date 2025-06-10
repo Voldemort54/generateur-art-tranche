@@ -92,7 +92,7 @@
             .content-container .non-premium-message a:hover {
                 text-decoration: none;
             }
-            /* Styles pour les résultats de génération (seulement le bouton de téléchargement ici) */
+            /* Styles pour les résultats de génération */
             .results-section {
                 margin-top: 40px;
                 padding-top: 30px;
@@ -150,22 +150,19 @@
                     <label for="image_source">Image source :</label>
                     <input type="file" id="image_source" name="image_source" accept="image/*" required>
 
-                    {# NOUVEAUX CHAMPS DE SAISIE POUR LE CALCUL DU NOMBRE DE PAGES #}
-                    <label for="derniere_page_numerotee">Numéro de la dernière page numérotée :</label>
-                    <input type="number" id="derniere_page_numerotee" name="derniere_page_numerotee" value="579" min="1" required oninput="calculerNombrePages()">
-
+                    {# NOUVEL ORDRE DES CHAMPS ET NOUVEAU CHAMP CALCULÉ #}
                     <label for="feuilles_avant_premiere_page">Nombre de feuilles avant la page numérotée 1 :</label>
                     <input type="number" id="feuilles_avant_premiere_page" name="feuilles_avant_premiere_page" value="0" min="0" required oninput="calculerNombrePages()">
+
+                    <label for="derniere_page_numerotee">Numéro de la dernière page numérotée :</label>
+                    <input type="number" id="derniere_page_numerotee" name="derniere_page_numerotee" value="579" min="1" required oninput="calculerNombrePages()">
 
                     <label for="feuilles_apres_derniere_page">Nombre de feuilles après la dernière page numérotée :</label>
                     <input type="number" id="feuilles_apres_derniere_page" name="feuilles_apres_derniere_page" value="0" min="0" required oninput="calculerNombrePages()">
 
-                    {# CHAMPS AFFICHANT LES RÉSULTATS DU CALCUL (NON MODIFIABLES) #}
-                    <label for="nombre_pages_calcule">Nombre total de pages du livre (calculé) :</label>
-                    <input type="text" id="nombre_pages_calcule" name="nombre_pages_calcule_display" value="579" readonly>
-
-                    <label for="nombre_tranches_calcule">Nombre de tranches (calculé) :</label>
-                    <input type="text" id="nombre_tranches_calcule" name="nombre_tranches_calcule_display" value="290" readonly>
+                    {# CHAMP D'AFFICHAGE COMBINÉ DES RÉSULTATS (NON MODIFIABLE) #}
+                    <label for="pages_tranches_calculees">Nombre total de pages et de tranches (calculé) :</label>
+                    <input type="text" id="pages_tranches_calculees" name="pages_tranches_calculees_display" value="579 pages / 290 tranches" readonly>
 
                     <label for="hauteur_livre">Hauteur du livre (mm) :</label>
                     <input type="number" id="hauteur_livre" name="hauteur_livre" value="225.0" step="0.1" required>
@@ -176,10 +173,10 @@
                     <label for="debut_numero_tranche">Numéro de la première page :</label>
                     <input type="number" id="debut_numero_tranche" name="debut_numero_tranche" value="1" required>
                     
-                    <button type="submit">Générer le PDF</button> {# Bouton mis à jour sans mention de simulation #}
+                    <button type="submit">Générer le PDF</button>
                 </form>
 
-                {# DEBUG: Afficher les valeurs des variables passées au template (MAJ pour ne plus afficher la simulation) #}
+                {# DEBUG: Afficher les valeurs des variables passées au template #}
                 <div style="background-color: #e0f2f7; padding: 10px; margin-top: 20px; border-radius: 5px; text-align: left; color: #006064;">
                     <p>DEBUG HTML Jinja2 (variables passées au template):</p>
                     <p>last_generated_pdf_filename: <strong>{{ last_generated_pdf_filename }}</strong></p>
@@ -187,10 +184,10 @@
                 </div>
                 {# FIN DEBUG #}
 
-                {# Section pour afficher le lien de téléchargement (image de simulation retirée) #}
-                {% if last_generated_pdf_filename %} {# CORRECTION: Condition mise à jour #}
+                {# Section pour afficher le lien de téléchargement #}
+                {% if last_generated_pdf_filename %}
                 <div class="results-section">
-                    <h2>Votre PDF est prêt !</h2> {# Titre mis à jour #}
+                    <h2>Votre PDF est prêt !</h2>
                     <a href="{{ url_for('get_generated_pdf', filename=last_generated_pdf_filename) }}" class="download-button">Télécharger le PDF</a>
                 </div>
                 {% endif %}
@@ -205,17 +202,24 @@
 
     <script>
         function calculerNombrePages() {
-            let dernierePageNumerotee = parseInt(document.getElementById('derniere_page_numerotee').value) || 0;
+            // Récupérer les valeurs des champs (maintenant dans le nouvel ordre)
             let feuillesAvantPremierePage = parseInt(document.getElementById('feuilles_avant_premiere_page').value) || 0;
+            let dernierePageNumerotee = parseInt(document.getElementById('derniere_page_numerotee').value) || 0;
             let feuillesApresDernierePage = parseInt(document.getElementById('feuilles_apres_derniere_page').value) || 0;
 
-            let nombrePagesCalcule = dernierePageNumerotee + (feuillesAvantPremierePage * 2) + (feuillesApresDerniere_page * 2);
-            let nombreTranchesCalcule = Math.ceil(nombrePagesCalcule / 2); // Toujours arrondir au supérieur
+            // Calcul du nombre total de pages
+            // Le nombre de pages non numérotées est le double du nombre de feuilles.
+            let nombrePagesCalcule = dernierePageNumerotee + (feuillesAvantPremierePage * 2) + (feuillesApresDernierePage * 2);
+            
+            // Calcul du nombre de tranches (une tranche par feuille)
+            // C'est le nombre de feuilles total. Chaque feuille = 2 pages.
+            let nombreTranchesCalcule = Math.ceil(nombrePagesCalcule / 2); // Math.ceil pour arrondir au supérieur
 
-            document.getElementById('nombre_pages_calcule').value = nombrePagesCalcule;
-            document.getElementById('nombre_tranches_calcule').value = nombreTranchesCalcule;
+            // Mettre à jour le champ combiné
+            document.getElementById('pages_tranches_calculees').value = `${nombrePagesCalcule} pages / ${nombreTranchesCalcule} tranches`;
         }
 
+        // Appeler la fonction au chargement de la page pour initialiser les valeurs
         document.addEventListener('DOMContentLoaded', calculerNombrePages);
     </script>
 {% endblock %}
