@@ -28,19 +28,19 @@
             margin-bottom: 20px;
             line-height: 1.5;
         }
-        .gumroad-button-container { /* Nouveau style pour le bouton Gumroad */
+        .gumroad-button-container {
             margin-top: 30px;
         }
-        .gumroad-button { /* Style de base pour un bouton simple */
-            background-color: #337ab7; /* Une couleur bleue pour contraster */
+        .gumroad-button {
+            background-color: #337ab7;
             color: white;
             padding: 15px 30px;
             border: none;
             border-radius: 5px;
             font-size: 1.1em;
             cursor: pointer;
-            text-decoration: none; /* Pour enlever le soulignement du lien */
-            display: inline-block; /* Pour que le padding fonctionne bien */
+            text-decoration: none;
+            display: inline-block;
             transition: background-color 0.3s ease;
         }
         .gumroad-button:hover {
@@ -93,7 +93,7 @@
         <p>Profitez de toutes les fonctionnalités sans restrictions.</p>
 
         <div class="gumroad-button-container">
-            {# Ce lien sera remplacé par l'URL de votre produit d'abonnement Gumroad #}
+            {# Insérez l'URL de votre produit d'abonnement Gumroad ici #}
             <a href="URL_DE_VOTRE_PRODUIT_ABONNEMENT_GUMROAD" target="_blank" class="gumroad-button">
                 S'abonner via Gumroad
             </a>
@@ -102,7 +102,8 @@
         <p style="margin-top: 30px;">
             <small>Après le paiement sur Gumroad, votre compte sera activé manuellement par l'administrateur. Merci de votre patience !</small>
         </p>
-        <p><a href="{{ url_for('index') }}">Retour à l'accueil</a></p>
+        {# CORRECTION: Changer url_for('index') en url_for('app_dashboard') #}
+        <p><a href="{{ url_for('app_dashboard') }}">Retour à l'application</a></p>
     </div>
 </body>
 </html>

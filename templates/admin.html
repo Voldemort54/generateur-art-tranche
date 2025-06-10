@@ -142,7 +142,8 @@
             </tbody>
         </table>
 
-        <p class="back-link"><a href="{{ url_for('index') }}">Retour à l'accueil</a></p>
+        {# CORRECTION: Changer url_for('index') en url_for('app_dashboard') #}
+        <p class="back-link"><a href="{{ url_for('app_dashboard') }}">Retour à l'application</a></p>
     </div>
 </body>
 </html>

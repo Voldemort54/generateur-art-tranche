@@ -84,6 +84,19 @@
         .link-login a:hover {
             text-decoration: underline;
         }
+        .back-to-home { /* Nouveau style pour le lien de retour */
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+        .back-to-home a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .back-to-home a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -114,6 +127,8 @@
             <button type="submit">S'inscrire</button>
         </form>
         <p class="link-login">Déjà un compte ? <a href="{{ url_for('login') }}">Connectez-vous ici</a></p>
+        {# NOUVEAU: Lien pour retourner à la page d'accueil publique #}
+        <p class="back-to-home"><a href="{{ url_for('public_home') }}">Retour à l'accueil</a></p>
     </div>
 </body>
 </html>
