@@ -152,20 +152,20 @@
 
                     {# NOUVEL ORDRE DES CHAMPS ET VALEURS PAR DÉFAUT/TYPES #}
                     <label for="feuilles_avant_premiere_page">Nombre de feuilles avant la page numérotée 1 :</label>
-                    <input type="number" id="feuilles_avant_premiere_page" name="feuilles_avant_premiere_page" min="0" required oninput="calculerNombrePages()">
+                    <input type="number" id="feuilles_avant_premiere_page" name="feuilles_avant_premiere_page" value="0" min="0" required oninput="calculerNombrePages()">
 
                     <label for="derniere_page_numerotee">Numéro de la dernière page numérotée :</label>
-                    <input type="number" id="derniere_page_numerotee" name="derniere_page_numerotee" min="1" required oninput="calculerNombrePages()">
+                    <input type="number" id="derniere_page_numerotee" name="derniere_page_numerotee" value="1" min="1" required oninput="calculerNombrePages()"> {# VALEUR PAR DÉFAUT 1 #}
 
                     <label for="feuilles_apres_derniere_page">Nombre de feuilles après la dernière page numérotée :</label>
-                    <input type="number" id="feuilles_apres_derniere_page" name="feuilles_apres_derniere_page" min="0" required oninput="calculerNombrePages()">
+                    <input type="number" id="feuilles_apres_derniere_page" name="feuilles_apres_derniere_page" value="0" min="0" required oninput="calculerNombrePages()">
 
                     {# CHAMP D'AFFICHAGE COMBINÉ DES RÉSULTATS (NON MODIFIABLE) #}
                     <label for="pages_tranches_calculees">Nombre total de pages et de tranches (calculé) :</label>
-                    <input type="text" id="pages_tranches_calculees" name="pages_tranches_calculees_display" value="0 pages / 0 tranches" readonly>
+                    <input type="text" id="pages_tranches_calculees" name="pages_tranches_calculees_display" value="1 pages / 1 tranches" readonly> {# VALEUR INITIALE COHÉRENTE #}
 
                     <label for="hauteur_livre">Hauteur du livre (mm) :</label>
-                    <input type="number" id="hauteur_livre" name="hauteur_livre" min="1" required oninput="calculerNombrePages()">
+                    <input type="number" id="hauteur_livre" name="hauteur_livre" value="1" min="1" required oninput="calculerNombrePages()"> {# VALEUR PAR DÉFAUT 1 #}
 
                     <label for="largeur_tranche_etiree_cible">Largeur de la tranche imprimée (mm) :</label>
                     {# MODIFIÉ : step="0.1" supprimé pour n'accepter que des entiers, value="10" #}
@@ -202,32 +202,48 @@
 
     <script>
         function calculerNombrePages() {
-            // Récupérer les valeurs des champs, en s'assurant qu'elles sont des nombres (0 si vide)
+            // Récupérer les valeurs des champs, en s'assurant qu'elles sont des nombres (0 si vide ou NaN)
             let feuillesAvantPremierePage = parseInt(document.getElementById('feuilles_avant_premiere_page').value) || 0;
             let dernierePageNumerotee = parseInt(document.getElementById('derniere_page_numerotee').value) || 0;
             let feuillesApresDernierePage = parseInt(document.getElementById('feuilles_apres_derniere_page').value) || 0;
             let hauteurLivre = parseFloat(document.getElementById('hauteur_livre').value) || 0; 
-            // MODIFIÉ : largeurTranche est maintenant un entier, utilise parseInt
             let largeurTranche = parseInt(document.getElementById('largeur_tranche_etiree_cible').value) || 0;
 
+            // Définir une variable pour le message d'erreur si les valeurs sont invalides
+            let errorMessage = "";
+
+            // Validation des champs individuels selon leurs contraintes min
+            if (feuillesAvantPremierePage < 0) {
+                errorMessage = "Feuilles avant ne peut pas être négatif.";
+            } else if (dernierePageNumerotee < 1) { // Min 1 pour la dernière page numérotée
+                errorMessage = "Dernière page numérotée doit être au moins 1.";
+            } else if (feuillesApresDernierePage < 0) {
+                errorMessage = "Feuilles après ne peut pas être négatif.";
+            } else if (hauteurLivre < 1) { // Min 1mm pour la hauteur du livre
+                errorMessage = "Hauteur du livre doit être au moins 1mm.";
+            } else if (largeurTranche < 1) { // Min 1mm pour la largeur de tranche
+                errorMessage = "Largeur de tranche doit être au moins 1mm.";
+            }
+
+
+            if (errorMessage) {
+                document.getElementById('pages_tranches_calculees').value = errorMessage;
+                return; // Arrêter la fonction si validation échoue
+            }
 
             // Calcul du nombre total de pages
             let nombrePagesCalcule = dernierePageNumerotee + (feuillesAvantPremierePage * 2) + (feuillesApresDernierePage * 2);
             
-            // Calcul du nombre de tranches (une tranche par feuille)
-            let nombreTranchesCalcule = Math.ceil(nombrePagesCalcule / 2); // Math.ceil pour arrondir au supérieur
+            // Calcul du nombre de tranches (chaque tranche correspond à une feuille)
+            let nombreTranchesCalcule = Math.ceil(nombrePagesCalcule / 2);
 
-            // Gérer les cas où les valeurs sont non-numériques ou négatives pour l'affichage
-            if (dernierePageNumerotee < 0 || feuillesAvantPremierePage < 0 || feuillesApresDernierePage < 0 || hauteurLivre <= 0 || largeurTranche <= 0) {
-                 document.getElementById('pages_tranches_calculees').value = "Valeurs invalides";
-                 return; // Arrêter la fonction si les valeurs sont invalides
-            }
+            // Validation finale du nombre de pages calculé
             if (nombrePagesCalcule < 1 || isNaN(nombrePagesCalcule)) { // Au moins une page
                  document.getElementById('pages_tranches_calculees').value = "0 pages / 0 tranches";
                  return;
             }
 
-            // Mettre à jour le champ combiné
+            // Mettre à jour le champ combiné avec les valeurs valides
             document.getElementById('pages_tranches_calculees').value = `${nombrePagesCalcule} pages / ${nombreTranchesCalcule} tranches`;
         }
 
