@@ -3,14 +3,105 @@
 {% block title %}Générateur d'Art sur Tranche - Application{% endblock %}
 
 {% block content %}
-    <div class="content-container"> {# Utilise la classe de base.html pour le conteneur #}
+    <div class="content-container">
+        <style>
+            /* Styles spécifiques à index.html pour la disposition du formulaire */
+            .content-container h1 {
+                color: #2c3e50;
+                text-align: center;
+                margin-bottom: 30px;
+                font-size: 2.2em;
+            }
+            .content-container label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: bold;
+                color: #444;
+            }
+            .content-container input[type="file"],
+            .content-container input[type="text"],
+            .content-container input[type="number"],
+            .content-container input[type="email"],
+            .content-container input[type="password"] {
+                width: calc(100% - 20px); /* 100% moins padding */
+                padding: 12px;
+                margin-bottom: 25px;
+                border: 1px solid #ddd;
+                border-radius: 6px; /* Bords légèrement arrondis */
+                box-sizing: border-box;
+                font-size: 1em;
+            }
+            .content-container button[type="submit"] {
+                background-color: #007bff;
+                color: white;
+                padding: 14px 25px;
+                border: none;
+                border-radius: 8px; /* Bords arrondis pour les boutons */
+                cursor: pointer;
+                font-size: 1.1em;
+                width: 100%;
+                transition: background-color 0.3s ease, transform 0.2s ease;
+                box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2); /* Ombre légère */
+            }
+            .content-container button[type="submit"]:hover {
+                background-color: #0056b3;
+                transform: translateY(-2px);
+            }
+            .content-container .user-info {
+                text-align: center;
+                margin-bottom: 25px;
+                font-size: 1.1em;
+                color: #666;
+                padding: 10px 0;
+                border-bottom: 1px dashed #eee;
+            }
+            .content-container .user-info strong {
+                color: #2c3e50;
+            }
+            .content-container .premium-message,
+            .content-container .non-premium-message {
+                text-align: center;
+                margin-top: 20px;
+                padding: 18px;
+                border: 1px solid;
+                border-radius: 8px;
+                font-weight: bold;
+                font-size: 1.05em;
+            }
+            .content-container .premium-message {
+                background-color: #e2f0d9; /* Vert clair */
+                border-color: #badbcc;
+                color: #1a642e; /* Vert foncé */
+            }
+            .content-container .non-premium-message {
+                background-color: #ffeeba; /* Jaune clair */
+                border-color: #ffdf7e;
+                color: #856404; /* Jaune foncé */
+            }
+            .content-container .non-premium-message a {
+                color: #856404;
+                font-weight: bold;
+                text-decoration: underline;
+            }
+            .content-container .non-premium-message a:hover {
+                text-decoration: none;
+            }
+            /* Réactivité pour les petits écrans */
+            @media (max-width: 600px) {
+                .content-container {
+                    padding: 25px 20px;
+                }
+                .content-container h1 {
+                    font-size: 1.8em;
+                }
+            }
+        </style>
+
         <h1>Créez votre Art sur Tranche</h1>
 
         {% if current_user.is_authenticated %}
         <p class="user-info">Connecté en tant que : <strong>{{ current_user.email }}</strong></p>
         {% endif %}
-
-        {# Les messages flash sont maintenant gérés dans base.html, donc supprimés d'ici #}
 
         {% if current_user.is_authenticated %}
             {% if is_premium %}
@@ -42,7 +133,6 @@
                 <p class="non-premium-message">Vous n'avez pas d'abonnement actif. <a href="{{ url_for('subscribe') }}">Abonnez-vous ici</a> pour accéder au générateur de PDF.</p>
             {% endif %}
         {% else %}
-            {# Ce bloc ne devrait normalement pas s'afficher car la page est protégée par login_required #}
             <p style="text-align: center;">Veuillez vous connecter ou vous inscrire pour utiliser le générateur.</p>
         {% endif %}
     </div>

@@ -3,10 +3,57 @@
 {% block title %}S'abonner - Générateur d'Art sur Tranche de Livre{% endblock %}
 
 {% block content %}
-    <div class="content-container" style="text-align: center;"> {# Utilise la classe de base.html #}
-        <h1>Abonnez-vous pour un accès illimité !</h1>
+    <div class="content-container">
+        <style>
+            /* Styles spécifiques à subscribe.html */
+            .content-container h1 {
+                color: #2c3e50;
+                margin-bottom: 30px;
+                font-size: 2.2em;
+            }
+            .content-container p {
+                font-size: 1.1em;
+                line-height: 1.6;
+                margin-bottom: 25px;
+                color: #555;
+            }
+            .content-container .gumroad-button-container {
+                margin-top: 30px;
+            }
+            .content-container .gumroad-button {
+                background-color: #337ab7; /* Une couleur bleue pour contraster */
+                color: white;
+                padding: 15px 30px;
+                border: none;
+                border-radius: 8px;
+                font-size: 1.1em;
+                cursor: pointer;
+                text-decoration: none;
+                display: inline-block;
+                transition: background-color 0.3s ease, transform 0.2s ease;
+                box-shadow: 0 4px 8px rgba(51, 122, 183, 0.2);
+            }
+            .content-container .gumroad-button:hover {
+                background-color: #286090;
+                transform: translateY(-2px);
+            }
+            .content-container small {
+                display: block; /* Pour que la balise small soit sur sa propre ligne */
+                margin-top: 30px;
+                font-size: 0.9em;
+                color: #777;
+            }
+            .content-container a {
+                color: #007bff;
+                text-decoration: none;
+                font-weight: bold;
+            }
+            .content-container a:hover {
+                text-decoration: underline;
+            }
+        </style>
 
-        {# Les messages flash sont maintenant gérés dans base.html #}
+        <h1>Abonnez-vous pour un accès illimité !</h1>
 
         <p>Obtenez un accès complet au générateur de PDF pour seulement **9,00 € par mois**.</p>
         <p>Profitez de toutes les fonctionnalités sans restrictions.</p>
@@ -18,10 +65,9 @@
             </a>
         </div>
 
-        <p style="margin-top: 30px;">
+        <p>
             <small>Après le paiement sur Gumroad, votre compte sera activé manuellement par l'administrateur. Merci de votre patience !</small>
         </p>
-        {# Lien pour retourner à la page d'accueil publique, PAS à l'application #}
         <p><a href="{{ url_for('public_home') }}">Retour à l'accueil</a></p>
     </div>
 {% endblock %}

@@ -3,10 +3,80 @@
 {% block title %}Administration - Générateur d'Art sur Tranche de Livre{% endblock %}
 
 {% block content %}
-    <div class="content-container"> {# Utilise la classe de base.html #}
-        <h1>Tableau de Bord Administrateur</h1>
+    <div class="content-container">
+        <style>
+            /* Styles spécifiques à admin.html */
+            .content-container h1 {
+                color: #2c3e50;
+                text-align: center;
+                margin-bottom: 30px;
+                font-size: 2.2em;
+            }
+            .content-container h2 {
+                color: #333;
+                margin-bottom: 20px;
+                font-size: 1.5em;
+            }
+            .content-container table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); /* Ombre légère pour le tableau */
+                border-radius: 8px; /* Bords arrondis pour le tableau */
+                overflow: hidden; /* Assure que les bords arrondis sont visibles */
+            }
+            .content-container th,
+            .content-container td {
+                border: 1px solid #eee; /* Lignes plus fines */
+                padding: 12px 15px;
+                text-align: left;
+                font-size: 0.95em;
+            }
+            .content-container th {
+                background-color: #f8f8f8; /* Arrière-plan des en-têtes */
+                font-weight: bold;
+                color: #555;
+            }
+            .content-container tr:nth-child(even) {
+                background-color: #fdfdfd; /* Lignes alternées pour la lisibilité */
+            }
+            .content-container .action-form {
+                display: inline-block;
+                margin-left: 5px;
+            }
+            .content-container .action-form button {
+                background-color: #007bff;
+                color: white;
+                padding: 8px 15px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 0.9em;
+                transition: background-color 0.3s ease, transform 0.2s ease;
+            }
+            .content-container .action-form button.danger {
+                background-color: #dc3545;
+            }
+            .content-container .action-form button:hover {
+                opacity: 0.9;
+                transform: translateY(-1px);
+            }
+            .content-container .back-link {
+                display: block;
+                text-align: center;
+                margin-top: 30px;
+            }
+            .content-container .back-link a {
+                color: #007bff;
+                text-decoration: none;
+                font-weight: bold;
+            }
+            .content-container .back-link a:hover {
+                text-decoration: underline;
+            }
+        </style>
 
-        {# Les messages flash sont maintenant gérés dans base.html #}
+        <h1>Tableau de Bord Administrateur</h1>
 
         <h2>Liste des Utilisateurs</h2>
         <table>
@@ -39,7 +109,6 @@
             </tbody>
         </table>
 
-        {# Lien de retour vers la page de l'application #}
         <p class="back-link"><a href="{{ url_for('app_dashboard') }}">Retour à l'application</a></p>
     </div>
 {% endblock %}

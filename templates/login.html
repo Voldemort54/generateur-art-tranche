@@ -1,118 +1,65 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion - Générateur d'Art sur Tranche de Livre</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f4f4f4;
-            color: #333;
-        }
-        .container {
-            max-width: 400px;
-            margin: 50px auto;
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
-        input[type="email"],
-        input[type="password"] {
-            width: calc(100% - 20px);
-            padding: 10px;
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        button {
-            background-color: #007bff;
-            color: white;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            width: 100%;
-            transition: background-color 0.3s ease;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .flash-messages {
-            list-style: none;
-            padding: 0;
-            margin-bottom: 20px;
-        }
-        .flash-messages li {
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 10px;
-            border: 1px solid transparent;
-        }
-        .flash-messages li.success {
-            background-color: #d4edda;
-            color: #155724;
-            border-color: #c3e6cb;
-        }
-        .flash-messages li.danger {
-            background-color: #f8d7da;
-            color: #721c24;
-            border-color: #f5c6cb;
-        }
-        .link-register {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .link-register a {
-            color: #007bff;
-            text-decoration: none;
-        }
-        .link-register a:hover {
-            text-decoration: underline;
-        }
-        .back-to-home { /* Nouveau style pour le lien de retour */
-            display: block;
-            text-align: center;
-            margin-top: 20px;
-            font-size: 0.9em;
-        }
-        .back-to-home a {
-            color: #007bff;
-            text-decoration: none;
-        }
-        .back-to-home a:hover {
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Connexion</h1>
+{% extends "base.html" %}
 
-        {# Affichage des messages flash #}
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            <ul class="flash-messages">
-            {% for category, message in messages %}
-              <li class="{{ category }}">{{ message }}</li>
-            {% endfor %}
-            </ul>
-          {% endif %}
-        {% endwith %}
+{% block title %}Connexion - Générateur d'Art sur Tranche de Livre{% endblock %}
+
+{% block content %}
+    <div class="content-container">
+        <style>
+            /* Styles spécifiques à login.html pour la disposition du formulaire */
+            .content-container h1 {
+                color: #2c3e50;
+                text-align: center;
+                margin-bottom: 30px;
+                font-size: 2.2em;
+            }
+            .content-container label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: bold;
+                color: #444;
+            }
+            .content-container input[type="email"],
+            .content-container input[type="password"] {
+                width: calc(100% - 20px);
+                padding: 12px;
+                margin-bottom: 25px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                box-sizing: border-box;
+                font-size: 1em;
+            }
+            .content-container button {
+                background-color: #007bff;
+                color: white;
+                padding: 14px 25px;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 1.1em;
+                width: 100%;
+                transition: background-color 0.3s ease, transform 0.2s ease;
+                box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
+            }
+            .content-container button:hover {
+                background-color: #0056b3;
+                transform: translateY(-2px);
+            }
+            .content-container .link-register,
+            .content-container .back-to-home {
+                text-align: center;
+                margin-top: 20px;
+                font-size: 0.9em;
+            }
+            .content-container a {
+                color: #007bff;
+                text-decoration: none;
+            }
+            .content-container a:hover {
+                text-decoration: underline;
+            }
+        </style>
+
+        <h1>Connexion</h1>
 
         <form method="POST" action="{{ url_for('login') }}">
             <label for="email">Email :</label>
@@ -124,8 +71,6 @@
             <button type="submit">Se connecter</button>
         </form>
         <p class="link-register">Pas encore de compte ? <a href="{{ url_for('register') }}">S'inscrire ici</a></p>
-        {# NOUVEAU: Lien pour retourner à la page d'accueil publique #}
         <p class="back-to-home"><a href="{{ url_for('public_home') }}">Retour à l'accueil</a></p>
     </div>
-</body>
-</html>
+{% endblock %}
