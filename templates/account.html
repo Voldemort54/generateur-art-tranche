@@ -91,7 +91,16 @@
 
         <div class="account-info">
             <p><strong>Email :</strong> {{ current_user.email }}</p>
-            <p><strong>Statut :</strong> {{ 'Administrateur' if current_user.is_admin else 'Utilisateur standard' }}</p>
+            <p>
+                <strong>Statut :</strong>
+                {% if current_user.is_admin %}
+                    Administrateur
+                {% elif current_user.is_premium %} {# NOUVEAU: Détecte si premium #}
+                    Utilisateur Premium
+                {% else %}
+                    Utilisateur standard
+                {% endif %}
+            </p>
 
             <div class="premium-status {% if current_user.is_premium %}active{% else %}inactive{% endif %}">
                 {% if current_user.is_premium %}
