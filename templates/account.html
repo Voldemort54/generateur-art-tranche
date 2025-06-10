@@ -50,7 +50,8 @@
                 margin-top: 30px;
                 text-align: center;
             }
-            .account-actions button {
+            .account-actions button,
+            .account-actions a { /* Style pour les liens qui ressemblent à des boutons */
                 background-color: #007bff;
                 color: white;
                 padding: 12px 25px;
@@ -60,14 +61,17 @@
                 font-size: 1em;
                 transition: background-color 0.3s ease, transform 0.2s ease;
                 box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
+                text-decoration: none; /* Pour les liens */
+                display: inline-block; /* Pour que les liens prennent la taille du bouton */
+                margin: 0 10px; /* Espace entre les boutons d'action */
             }
-            .account-actions button:hover {
+            .account-actions button:hover,
+            .account-actions a:hover {
                 background-color: #0056b3;
                 transform: translateY(-2px);
             }
             .account-actions .danger-button {
                 background-color: #dc3545;
-                margin-left: 15px;
             }
             .account-actions .danger-button:hover {
                 background-color: #c82333;
@@ -85,6 +89,16 @@
             .back-link a:hover {
                 text-decoration: underline;
             }
+            .ticket-badge { /* Badge pour les tickets non lus par l'utilisateur */
+                background-color: #ff6347; /* Rouge */
+                color: white;
+                padding: 3px 8px;
+                border-radius: 12px;
+                font-size: 0.7em;
+                font-weight: bold;
+                margin-left: 5px;
+                vertical-align: middle;
+            }
         </style>
 
         <h1>Mon Compte</h1>
@@ -95,7 +109,7 @@
                 <strong>Statut :</strong>
                 {% if current_user.is_admin %}
                     Administrateur
-                {% elif current_user.is_premium %} {# NOUVEAU: Détecte si premium #}
+                {% elif current_user.is_premium %}
                     Utilisateur Premium
                 {% else %}
                     Utilisateur standard
@@ -115,8 +129,12 @@
         </div>
 
         <div class="account-actions">
-            {# Vous pourriez ajouter ici des options comme "Changer de mot de passe" ou "Gérer mon abonnement" (si Stripe est configuré pour un portail client) #}
-            {# Pour l'instant, c'est principalement pour l'information #}
+            <a href="{{ url_for('account_tickets') }}">Mes tickets de support
+                {% if user_unread_tickets_count is defined and user_unread_tickets_count > 0 %}
+                    <span class="ticket-badge">{{ user_unread_tickets_count }}</span>
+                {% endif %}
+            </a>
+            {# Autres actions de compte ici #}
         </div>
 
         <p class="back-link"><a href="{{ url_for('app_dashboard') }}">Retour à l'application</a></p>

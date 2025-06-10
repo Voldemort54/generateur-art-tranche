@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}Tickets de Support - Administration{% endblock %}
+
+{% block content %}
+    <div class="content-container">
+        <style>
+            /* Styles spécifiques à admin_tickets.html */
+            .content-container h1 {
+                color: #2c3e50;
+                text-align: center;
+                margin-bottom: 30px;
+                font-size: 2.2em;
+            }
+            .filter-form {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 30px;
+                padding: 15px;
+                background-color: #f8f8f8;
+                border-radius: 8px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                flex-wrap: wrap; /* Pour la réactivité */
+            }
+            .filter-form label {
+                font-weight: bold;
+                color: #555;
+            }
+            .filter-form input[type="email"],
+            .filter-form select {
+                flex-grow: 1;
+                max-width: 250px;
+                padding: 8px 12px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                font-size: 0.95em;
+            }
+            .filter-form button {
+                background-color: #007bff;
+                color: white;
+                padding: 8px 15px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 0.95em;
+                transition: background-color 0.3s ease;
+            }
+            .filter-form button:hover {
+                background-color: #0056b3;
+            }
+            .filter-form a.button { /* Style pour le bouton "Annuler filtre" */
+                background-color: #6c757d;
+                text-decoration: none;
+                padding: 8px 15px;
+                border-radius: 5px;
+                color: white;
+                font-size: 0.95em;
+                display: inline-block; /* Pour qu'il se comporte comme un bouton */
+            }
+            .filter-form a.button:hover {
+                background-color: #5a6268;
+            }
+
+            .ticket-list {
+                margin-top: 30px;
+            }
+            .ticket-card {
+                background-color: #fdfdfd;
+                border: 1px solid #eee;
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 15px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+                text-align: left;
+                position: relative;
+                transition: background-color 0.2s ease;
+            }
+            .ticket-card.unread-admin { /* Style pour les tickets non lus par l'admin */
+                background-color: #fffbe6; /* Jaune très clair */
+                border-color: #ffeeba;
+                box-shadow: 0 2px 8px rgba(255, 200, 0, 0.15);
+            }
+            .ticket-card h3 {
+                color: #333;
+                margin-top: 0;
+                margin-bottom: 10px;
+                font-size: 1.4em;
+            }
+            .ticket-card h3 a {
+                text-decoration: none;
+                color: #333;
+            }
+            .ticket-card h3 a:hover {
+                text-decoration: underline;
+            }
+            .ticket-card p {
+                font-size: 1em;
+                line-height: 1.6;
+                color: #555;
+                margin-bottom: 8px;
+            }
+            .ticket-card .meta-info {
+                font-size: 0.85em;
+                color: #777;
+                margin-top: 15px;
+                border-top: 1px dashed #eee;
+                padding-top: 10px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .meta-info strong {
+                color: #333;
+            }
+            .ticket-actions button,
+            .ticket-actions a {
+                background-color: #28a745;
+                color: white;
+                padding: 6px 12px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 0.9em;
+                transition: background-color 0.3s ease;
+                text-decoration: none;
+                display: inline-block;
+            }
+            .ticket-actions button.delete-button,
+            .ticket-actions a.delete-button {
+                background-color: #dc3545;
+                margin-left: 10px;
+            }
+            .ticket-actions button:hover,
+            .ticket-actions a:hover {
+                opacity: 0.9;
+            }
+            .ticket-status-badge {
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 0.8em;
+                font-weight: bold;
+                color: white;
+                margin-left: 10px;
+            }
+            .status-Ouvert { background-color: #007bff; } /* Bleu */
+            .status-En-attente-r-ponse-admin { background-color: #ffc107; color: #343a40;} /* Jaune, texte foncé */
+            .status-En-attente-r-ponse-utilisateur { background-color: #17a2b8; } /* Cyan */
+            .status-Ferm- { background-color: #6c757d; } /* Gris */
+            
+            .no-tickets {
+                text-align: center;
+                color: #777;
+                font-style: italic;
+                margin-top: 50px;
+            }
+            .back-link {
+                display: block;
+                text-align: center;
+                margin-top: 40px;
+                font-size: 1.1em;
+            }
+            .back-link a {
+                color: #007bff;
+                text-decoration: none;
+            }
+            .back-link a:hover {
+                text-decoration: underline;
+            }
+        </style>
+
+        <h1>Tickets de Support</h1>
+
+        {# Formulaire de filtre par e-mail et statut #}
+        <div class="filter-form">
+            <form action="{{ url_for('admin_tickets') }}" method="GET" style="display: flex; gap: 10px; width: 100%; justify-content: center; align-items: center; flex-wrap: wrap;">
+                <label for="filter_email">Filtrer par e-mail :</label>
+                <input type="email" id="filter_email" name="email" value="{{ filter_email }}" placeholder="ex: user@example.com">
+                
+                <label for="filter_status">Statut :</label>
+                <select id="filter_status" name="status">
+                    <option value="Tous" {% if filter_status == 'Tous' %}selected{% endif %}>Tous</option>
+                    <option value="Ouvert" {% if filter_status == 'Ouvert' %}selected{% endif %}>Ouvert</option>
+                    <option value="En attente (réponse admin)" {% if filter_status == 'En attente (réponse admin)' %}selected{% endif %}>En attente (admin)</option>
+                    <option value="En attente (réponse utilisateur)" {% if filter_status == 'En attente (réponse utilisateur)' %}selected{% endif %}>En attente (utilisateur)</option>
+                    <option value="Fermé" {% if filter_status == 'Fermé' %}selected{% endif %}>Fermé</option>
+                </select>
+
+                <button type="submit">Filtrer</button>
+                {% if filter_email or filter_status != 'Tous' %}
+                    <a href="{{ url_for('admin_tickets') }}" class="button" style="background-color: #6c757d;">Annuler filtre</a>
+                {% endif %}
+            </form>
+        </div>
+
+
+        {% if tickets %}
+            <div class="ticket-list">
+                {% for ticket in tickets %}
+                    <div class="ticket-card {% if ticket.has_unread_messages_by_admin %}unread-admin{% endif %}">
+                        <h3>
+                            <a href="{{ url_for('admin_ticket_detail', ticket_id=ticket.id) }}">
+                                Ticket #{{ ticket.id }}: {{ ticket.subject }}
+                            </a>
+                            <span class="ticket-status-badge status-{{ ticket.status|replace(' ', '-')|replace('(', '')|replace(')', '') }}">
+                                {{ ticket.status }}
+                            </span>
+                        </h3>
+                        <p><strong>De :</strong> {{ ticket.user_email }}</p>
+                        <p>Dernière mise à jour : {{ ticket.updated_at.strftime('%d/%m/%Y à %H:%M') }}</p>
+                        <div class="meta-info">
+                            <span>Créé le : {{ ticket.created_at.strftime('%d/%m/%Y à %H:%M') }}</span>
+                            <div class="ticket-actions">
+                                {% if ticket.has_unread_messages_by_admin %}
+                                    <form action="{{ url_for('admin_mark_ticket_as_read', ticket_id=ticket.id) }}" method="post" style="display:inline;">
+                                        <button type="submit">Marquer comme lu</button>
+                                    </form>
+                                {% endif %}
+                                <a href="{{ url_for('admin_ticket_detail', ticket_id=ticket.id) }}">Voir les détails</a>
+                                <form action="{{ url_for('admin_delete_ticket', ticket_id=ticket.id) }}" method="post" style="display:inline; margin-left: 10px;" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce ticket et tous ses messages ? Cette action est irréversible.');">
+                                    <button type="submit" class="delete-button" style="background-color: #dc3545;">Supprimer</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="no-tickets">
+                {% if filter_email or filter_status != 'Tous' %}
+                    Aucun ticket correspondant aux filtres.
+                {% else %}
+                    Aucun ticket de support pour le moment.
+                {% endif %}
+            </p>
+        {% endif %}
+
+        <p class="back-link"><a href="{{ url_for('admin_dashboard') }}">Retour au Tableau de Bord Admin</a></p>
+    </div>
+{% endblock %}

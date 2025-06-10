@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Mes Tickets de Support{% endblock %}
+
+{% block content %}
+    <div class="content-container">
+        <style>
+            /* Styles spécifiques à account_tickets.html */
+            .content-container h1 {
+                color: #2c3e50;
+                text-align: center;
+                margin-bottom: 30px;
+                font-size: 2.2em;
+            }
+            .ticket-list {
+                margin-top: 30px;
+            }
+            .ticket-card {
+                background-color: #fdfdfd;
+                border: 1px solid #eee;
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 15px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+                text-align: left;
+                position: relative;
+            }
+            .ticket-card.unread-user { /* Style pour les tickets non lus par l'utilisateur */
+                background-color: #e6f7ff; /* Bleu très clair */
+                border-color: #cceeff;
+                box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+            }
+            .unread-badge-user { /* Badge "Nouvelle Réponse" */
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background-color: #ff6347; /* Rouge orangé */
+                color: white;
+                padding: 5px 10px;
+                border-radius: 5px;
+                font-size: 0.8em;
+                font-weight: bold;
+            }
+            .ticket-card h3 {
+                color: #333;
+                margin-top: 0;
+                margin-bottom: 10px;
+                font-size: 1.4em;
+            }
+            .ticket-card h3 a {
+                text-decoration: none;
+                color: #333;
+            }
+            .ticket-card h3 a:hover {
+                text-decoration: underline;
+            }
+            .ticket-card p {
+                font-size: 1em;
+                line-height: 1.6;
+                color: #555;
+                margin-bottom: 8px;
+            }
+            .ticket-card .meta-info {
+                font-size: 0.85em;
+                color: #777;
+                margin-top: 15px;
+                border-top: 1px dashed #eee;
+                padding-top: 10px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .meta-info strong {
+                color: #333;
+            }
+            .ticket-status-badge {
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 0.8em;
+                font-weight: bold;
+                color: white;
+                margin-left: 10px;
+            }
+            .status-Ouvert { background-color: #007bff; }
+            .status-En-attente-r-ponse-admin { background-color: #ffc107; color: #343a40;}
+            .status-En-attente-r-ponse-utilisateur { background-color: #17a2b8; }
+            .status-Ferm- { background-color: #6c757d; }
+
+            .no-tickets {
+                text-align: center;
+                color: #777;
+                font-style: italic;
+                margin-top: 50px;
+            }
+            .back-link {
+                display: block;
+                text-align: center;
+                margin-top: 40px;
+                font-size: 1.1em;
+            }
+            .back-link a {
+                color: #007bff;
+                text-decoration: none;
+            }
+            .back-link a:hover {
+                text-decoration: underline;
+            }
+        </style>
+
+        <h1>Mes Tickets de Support</h1>
+
+        {% if tickets %}
+            <div class="ticket-list">
+                {% for ticket in tickets %}
+                    <div class="ticket-card {% if ticket.has_unread_messages_by_user %}unread-user{% endif %}">
+                        {% if ticket.has_unread_messages_by_user %}
+                            <span class="unread-badge-user">Nouvelle réponse</span>
+                        {% endif %}
+                        <h3>
+                            <a href="{{ url_for('account_ticket_detail', ticket_id=ticket.id) }}">
+                                Ticket #{{ ticket.id }}: {{ ticket.subject }}
+                            </a>
+                            <span class="ticket-status-badge status-{{ ticket.status|replace(' ', '-')|replace('(', '')|replace(')', '') }}">
+                                {{ ticket.status }}
+                            </span>
+                        </h3>
+                        <p>Dernière mise à jour : {{ ticket.updated_at.strftime('%d/%m/%Y à %H:%M') }}</p>
+                        <div class="meta-info">
+                            <span>Créé le : {{ ticket.created_at.strftime('%d/%m/%Y à %H:%M') }}</span>
+                            <div>
+                                <a href="{{ url_for('account_ticket_detail', ticket_id=ticket.id) }}" class="button" style="background-color: #007bff; color: white; padding: 6px 12px; border-radius: 5px; text-decoration: none; font-size: 0.9em;">Voir le fil</a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="no-tickets">Vous n'avez pas encore créé de ticket de support.</p>
+        {% endif %}
+
+        <p class="back-link"><a href="{{ url_for('account_management') }}">Retour à Mon Compte</a></p>
+    </div>
+{% endblock %}

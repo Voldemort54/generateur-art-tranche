@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Ticket #{{ ticket.id }} - Administration{% endblock %}
+
+{% block content %}
+    <div class="content-container">
+        <style>
+            /* Styles spécifiques à admin_ticket_detail.html */
+            .content-container h1 {
+                color: #2c3e50;
+                text-align: center;
+                margin-bottom: 30px;
+                font-size: 2.2em;
+            }
+            .ticket-header {
+                background-color: #f8f8f8;
+                border: 1px solid #eee;
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 25px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                text-align: left;
+            }
+            .ticket-header h2 {
+                color: #333;
+                margin-top: 0;
+                margin-bottom: 10px;
+                font-size: 1.8em;
+            }
+            .ticket-header p {
+                font-size: 1em;
+                margin-bottom: 5px;
+                color: #555;
+            }
+            .ticket-header strong {
+                color: #2c3e50;
+            }
+            .ticket-status-badge {
+                padding: 5px 10px;
+                border-radius: 5px;
+                font-size: 0.9em;
+                font-weight: bold;
+                color: white;
+                margin-left: 10px;
+                display: inline-block;
+            }
+            .status-Ouvert { background-color: #007bff; }
+            .status-En-attente-r-ponse-admin { background-color: #ffc107; color: #343a40;}
+            .status-En-attente-r-ponse-utilisateur { background-color: #17a2b8; }
+            .status-Ferm- { background-color: #6c757d; }
+
+            .message-list {
+                margin-top: 30px;
+            }
+            .message-bubble {
+                padding: 15px;
+                border-radius: 15px;
+                margin-bottom: 15px;
+                max-width: 85%;
+                position: relative;
+            }
+            .message-bubble.user {
+                background-color: #e6f7ff; /* Bleu très clair pour l'utilisateur */
+                border: 1px solid #cceeff;
+                margin-left: auto; /* Aligne à droite */
+                text-align: right;
+            }
+            .message-bubble.admin {
+                background-color: #e2f0d9; /* Vert très clair pour l'admin */
+                border: 1px solid #c3e6cb;
+                margin-right: auto; /* Aligne à gauche */
+                text-align: left;
+            }
+            .message-bubble p {
+                margin: 0;
+                color: #333;
+                font-size: 1em;
+                line-height: 1.5;
+                white-space: pre-wrap; /* Pour conserver les retours à la ligne */
+            }
+            .message-bubble .timestamp {
+                font-size: 0.75em;
+                color: #888;
+                margin-top: 5px;
+                display: block;
+            }
+            .message-bubble .sender {
+                font-weight: bold;
+                margin-bottom: 5px;
+                font-size: 0.9em;
+                color: #2c3e50;
+            }
+            .message-bubble.user .sender {
+                color: #007bff; /* Bleu plus prononcé */
+            }
+            .message-bubble.admin .sender {
+                color: #28a745; /* Vert plus prononcé */
+            }
+
+            .reply-form-section {
+                margin-top: 30px;
+                padding-top: 25px;
+                border-top: 1px dashed #eee;
+                text-align: left;
+            }
+            .reply-form-section h2 {
+                text-align: center;
+                margin-bottom: 25px;
+            }
+            .reply-form-section textarea {
+                width: calc(100% - 20px);
+                padding: 12px;
+                margin-bottom: 15px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                box-sizing: border-box;
+                font-size: 1em;
+                min-height: 150px;
+                resize: vertical;
+            }
+            .reply-form-section button[type="submit"] {
+                background-color: #007bff;
+                color: white;
+                padding: 14px 25px;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 1.1em;
+                width: 100%;
+                transition: background-color 0.3s ease, transform 0.2s ease;
+                box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
+            }
+            .reply-form-section button[type="submit"]:hover {
+                background-color: #0056b3;
+                transform: translateY(-2px);
+            }
+
+            .status-change-form {
+                margin-top: 30px;
+                text-align: center;
+                padding: 15px;
+                background-color: #f8f8f8;
+                border-radius: 8px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            }
+            .status-change-form label {
+                font-weight: bold;
+                color: #555;
+                margin-right: 10px;
+            }
+            .status-change-form select,
+            .status-change-form button {
+                padding: 8px 15px;
+                border-radius: 5px;
+                font-size: 1em;
+                border: 1px solid #ddd;
+            }
+            .status-change-form button {
+                background-color: #28a745;
+                color: white;
+                cursor: pointer;
+                border: none;
+                transition: background-color 0.3s ease;
+                margin-left: 10px;
+            }
+            .status-change-form button:hover {
+                background-color: #218838;
+            }
+            .back-link {
+                display: block;
+                text-align: center;
+                margin-top: 40px;
+                font-size: 1.1em;
+            }
+            .back-link a {
+                color: #007bff;
+                text-decoration: none;
+            }
+            .back-link a:hover {
+                text-decoration: underline;
+            }
+        </style>
+
+        <h1>Ticket de Support #{{ ticket.id }}</h1>
+
+        <div class="ticket-header">
+            <h2>
+                {{ ticket.subject }}
+                <span class="ticket-status-badge status-{{ ticket.status|replace(' ', '-')|replace('(', '')|replace(')', '') }}">
+                    {{ ticket.status }}
+                </span>
+            </h2>
+            <p><strong>De :</strong> {{ ticket.user_email }}</p>
+            <p>Créé le : {{ ticket.created_at.strftime('%d/%m/%Y à %H:%M') }}</p>
+            <p>Dernière mise à jour : {{ ticket.updated_at.strftime('%d/%m/%Y à %H:%M') }}</p>
+        </div>
+
+        <div class="message-list">
+            {% for message in ticket.messages|sort(attribute='timestamp') %} {# Tri par date pour le fil #}
+                <div class="message-bubble {{ message.sender_type }}">
+                    <span class="sender">
+                        {% if message.sender_type == 'user' %}
+                            {{ ticket.user_email }}
+                        {% else %}
+                            Administrateur
+                        {% endif %}
+                    </span>
+                    <p>{{ message.message_content }}</p>
+                    <span class="timestamp">{{ message.timestamp.strftime('%d/%m/%Y à %H:%M') }}</span>
+                </div>
+            {% endfor %}
+        </div>
+
+        {# Formulaire de réponse #}
+        <div class="reply-form-section">
+            <h2>Répondre au ticket</h2>
+            <form method="POST" action="{{ url_for('admin_ticket_detail', ticket_id=ticket.id) }}">
+                <label for="message_content">Votre message :</label>
+                <textarea id="message_content" name="message_content" required></textarea>
+                <button type="submit">Envoyer la réponse</button>
+            </form>
+        </div>
+
+        {# Formulaire de changement de statut #}
+        <div class="status-change-form">
+            <form action="{{ url_for('admin_change_ticket_status', ticket_id=ticket.id) }}" method="post">
+                <label for="new_status">Changer le statut :</label>
+                <select id="new_status" name="new_status">
+                    <option value="Ouvert" {% if ticket.status == 'Ouvert' %}selected{% endif %}>Ouvert</option>
+                    <option value="En attente (réponse admin)" {% if ticket.status == 'En attente (réponse admin)' %}selected{% endif %}>En attente (admin)</option>
+                    <option value="En attente (réponse utilisateur)" {% if ticket.status == 'En attente (réponse utilisateur)' %}selected{% endif %}>En attente (utilisateur)</option>
+                    <option value="Fermé" {% if ticket.status == 'Fermé' %}selected{% endif %}>Fermé</option>
+                </select>
+                <button type="submit">Appliquer</button>
+            </form>
+        </div>
+
+        <p class="back-link"><a href="{{ url_for('admin_tickets') }}">Retour à la liste des tickets</a></p>
+    </div>
+{% endblock %}

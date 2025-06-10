@@ -13,7 +13,7 @@
             color: #333;
         }
         .container {
-            max-width: 700px; /* Légèrement plus large pour le formulaire */
+            max-width: 700px;
             margin: 40px auto;
             background-color: #ffffff;
             padding: 35px;
@@ -32,9 +32,8 @@
             margin-bottom: 20px;
             color: #555;
         }
-        /* Styles pour le formulaire */
         form {
-            text-align: left; /* Aligne le texte du formulaire à gauche */
+            text-align: left;
             margin-top: 30px;
         }
         label {
@@ -46,7 +45,7 @@
         input[type="email"],
         input[type="text"],
         textarea {
-            width: calc(100% - 20px); /* 100% moins padding */
+            width: calc(100% - 20px);
             padding: 12px;
             margin-bottom: 25px;
             border: 1px solid #ddd;
@@ -55,7 +54,7 @@
             font-size: 1em;
         }
         textarea {
-            resize: vertical; /* Permet le redimensionnement vertical */
+            resize: vertical;
             min-height: 120px;
         }
         button[type="submit"] {
@@ -74,12 +73,11 @@
             background-color: #0056b3;
             transform: translateY(-2px);
         }
-        /* Styles des messages flash (hérités ou copiés pour cohérence) */
         .flash-messages {
             list-style: none;
             padding: 0;
             margin: 20px auto;
-            max-width: 100%; /* S'adapte au conteneur */
+            max-width: 100%;
             text-align: center;
         }
         .flash-messages li {
@@ -125,7 +123,6 @@
 
         <p>Pour toute question, suggestion ou demande d'assistance, veuillez remplir le formulaire ci-dessous. Nous vous recontacterons à l'adresse e-mail indiquée.</p>
         
-        {# Affichage des messages flash (pour les erreurs de validation ou succès) #}
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             <ul class="flash-messages">
