@@ -5,12 +5,13 @@ with app.app_context():
     print("Database tables created (or already existed).")
     # Si vous avez un utilisateur admin initial, vous pouvez le créer ici si la DB est vide.
     # Exemple (décommenter si nécessaire et remplacer les valeurs):
+    # import os
+    # from werkzeug.security import generate_password_hash
     # admin_email = os.environ.get('ADMIN_EMAIL')
     # admin_password = os.environ.get('ADMIN_PASSWORD')
     # if admin_email and admin_password:
     #     existing_admin = User.query.filter_by(email=admin_email).first()
     #     if not existing_admin:
-    #         from werkzeug.security import generate_password_hash # Import ici ou en haut
     #         print(f"Creating initial admin user: {admin_email}")
     #         new_admin = User(email=admin_email, password_hash=generate_password_hash(admin_password), is_premium=True, is_admin=True)
     #         db.session.add(new_admin)

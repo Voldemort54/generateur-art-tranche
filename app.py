@@ -58,13 +58,14 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f'<User {self.email}>'
 
-# NOUVEAU MODÈLE: Pour stocker les messages de contact
+# MODÈLE MIS À JOUR: Ajout de 'is_read'
 class ContactMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sender_email = db.Column(db.String(120), nullable=False)
     subject = db.Column(db.String(255), nullable=False)
     message_content = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow) # Date et heure de réception
+    is_read = db.Column(db.Boolean, default=False, nullable=False) # NOUVEAU: Pour savoir si le message est lu
 
     def __repr__(self):
         return f'<ContactMessage {self.subject} from {self.sender_email}>'
@@ -197,7 +198,7 @@ def subscribe():
 def legal_info():
     return render_template('legal.html')
 
-# MODIFICATION/AJOUT: Page de contact avec gestion de formulaire POST
+# Page de contact avec gestion de formulaire POST
 @app.route('/contact', methods=['GET', 'POST'])
 def contact_page():
     if request.method == 'POST':
@@ -209,7 +210,7 @@ def contact_page():
             flash('Tous les champs du formulaire de contact sont requis.', 'danger')
             return redirect(url_for('contact_page'))
         
-        # Validation d'email simple (Flask-Mail aurait des validateurs plus robustes)
+        # Validation d'email simple
         if '@' not in sender_email or '.' not in sender_email:
             flash('Veuillez entrer une adresse e-mail valide.', 'danger')
             return redirect(url_for('contact_page'))
@@ -218,7 +219,8 @@ def contact_page():
             new_message = ContactMessage(
                 sender_email=sender_email,
                 subject=subject,
-                message_content=message_content
+                message_content=message_content,
+                is_read=False # NOUVEAU: Marqué comme non lu par défaut
             )
             db.session.add(new_message)
             db.session.commit()
@@ -246,14 +248,42 @@ def account_management():
 @admin_required 
 def admin_dashboard():
     users = User.query.all()
-    return render_template('admin.html', users=users)
+    # NOUVEAU: Récupérer le nombre de messages non lus pour le badge
+    unread_messages_count = ContactMessage.query.filter_by(is_read=False).count()
+    return render_template('admin.html', users=users, unread_messages_count=unread_messages_count)
 
 # AJOUT: Route pour consulter les messages de contact (pour l'admin)
-@app.route('/admin/contact-messages')
+@app.route('/admin/contact-messages', methods=['GET']) # Ajout de methods=['GET'] explicite
 @admin_required
 def admin_contact_messages():
-    messages = ContactMessage.query.order_by(ContactMessage.timestamp.desc()).all()
-    return render_template('admin_contact_messages.html', messages=messages)
+    # Permettre le filtrage par email de l'expéditeur
+    filter_email = request.args.get('email', '')
+    
+    if filter_email:
+        # Filtrer les messages par email (recherche partielle insensible à la casse)
+        messages = ContactMessage.query.filter(
+            ContactMessage.sender_email.ilike(f'%{filter_email}%')
+        ).order_by(ContactMessage.timestamp.desc()).all()
+    else:
+        # Aucun filtre, récupérer tous les messages
+        messages = ContactMessage.query.order_by(ContactMessage.timestamp.desc()).all()
+        
+    return render_template('admin_contact_messages.html', messages=messages, filter_email=filter_email)
+
+# NOUVELLE ROUTE: Pour marquer un message comme lu
+@app.route('/admin/contact-messages/mark-as-read/<int:message_id>', methods=['POST'])
+@admin_required
+def admin_mark_message_as_read(message_id):
+    message = ContactMessage.query.get_or_404(message_id)
+    if not message.is_read:
+        message.is_read = True
+        try:
+            db.session.commit()
+            flash(f"Message de '{message.sender_email}' marqué comme lu.", 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Erreur lors de la mise à jour du message: {e}", 'danger')
+    return redirect(url_for('admin_contact_messages'))
 
 
 @app.route('/admin/toggle-premium/<int:user_id>', methods=['POST'])
@@ -280,6 +310,7 @@ def admin_set_admin(user_id):
     user.is_admin = not user.is_admin
     db.session.commit()
     flash(f"Statut administrateur de '{user.email}' changé à {user.is_admin}.", 'info')
+    # CORRECTION: Était is_user, doit être is_admin
     print(f"ADMIN ACTION: {user.email} admin status set to {user.is_admin}.")
     return redirect(url_for('admin_dashboard'))
 
