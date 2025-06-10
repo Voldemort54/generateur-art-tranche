@@ -7,15 +7,14 @@ import shutil
 from datetime import datetime, date, timedelta
 import secrets
 import functools
-import json
-import requests
+import json # Gardé car potentiellement utile pour d'autres besoins, mais plus pour PayPal
 
 # Importez vos fonctions de traitement d'image depuis le dossier core_logic
 from core_logic.image_processing import generer_tranches_individuelles, generer_pdf_a_partir_tranches
 
 app = Flask(__name__)
 
-# MODIFICATION CLÉ: Lire la clé secrète depuis les variables d'environnement
+# Lire la clé secrète depuis les variables d'environnement
 app.secret_key = os.environ.get('SECRET_KEY', 'votre_cle_secrete_de_secours_ici_pour_dev_seulement')
 
 # --- Configuration de la base de données ---
@@ -44,10 +43,10 @@ login_manager.login_message_category = 'info'
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False) # Taille augmentée à 256
+    password_hash = db.Column(db.String(256), nullable=False)
     is_premium = db.Column(db.Boolean, default=False)
-    is_admin = db.Column(db.Boolean, default=False) # Champ pour les administrateurs
-    premium_until = db.Column(db.Date, nullable=True) # Champ pour date de fin d'abonnement
+    is_admin = db.Column(db.Boolean, default=False)
+    premium_until = db.Column(db.Date, nullable=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -81,9 +80,8 @@ def allowed_file(filename):
 def admin_required(f):
     """Décorateur pour exiger que l'utilisateur soit un administrateur."""
     @login_required
-    @functools.wraps(f) # Utilise functools.wraps
+    @functools.wraps(f)
     def decorated_function(*args, **kwargs):
-        # Vérification double : doit être connecté ET admin
         if not current_user.is_authenticated or not current_user.is_admin: 
             flash("Accès non autorisé : Vous n'êtes pas un administrateur.", 'danger')
             return redirect(url_for('index')) 
@@ -103,13 +101,12 @@ def index():
         else:
             # Si la date est passée, l'abonnement a expiré
             current_user.is_premium = False
-            current_user.premium_until = None # Réinitialise la date de fin
+            current_user.premium_until = None
             db.session.commit()
             flash("Votre abonnement a expiré. Veuillez le renouveler.", 'danger')
             return redirect(url_for('subscribe'))
 
-    # MODIFICATION CLÉ : Permettre aux admins d'accéder à l'index même s'ils ne sont pas premium.
-    # La redirection vers '/subscribe' ne se fera que si l'utilisateur n'est PAS premium ET n'est PAS admin.
+    # Permettre aux admins d'accéder à l'index même s'ils ne sont pas premium.
     if not current_user.is_premium and not current_user.is_admin: 
         flash("Vous devez avoir un abonnement actif pour utiliser le générateur.", 'info')
         return redirect(url_for('subscribe'))
@@ -171,23 +168,15 @@ def logout():
 @app.route('/subscribe')
 @login_required
 def subscribe():
+    # L'URL du site est toujours utile, même si le paiement est externe
     site_base_url = "https://generateur-art-tranche.onrender.com" 
     return render_template('subscribe.html', site_base_url=site_base_url)
 
-@app.route('/paypal-success')
-@login_required
-def paypal_success():
-    # Vous pouvez récupérer le subscription_id ici: request.args.get('subscription_id')
-    # Pour le moment, l'activation est manuelle, donc juste un message de succès
-    flash('Paiement PayPal réussi ! Votre statut Premium sera activé sous peu.', 'success')
-    flash('Veuillez noter que l\'activation peut prendre un moment ou nécessiter une vérification manuelle. Contactez l\'administrateur si nécessaire.', 'info')
-    return redirect(url_for('index'))
-
-@app.route('/paypal-cancel')
-@login_required
-def paypal_cancel():
-    flash('Paiement PayPal annulé. Vous pouvez réessayer.', 'info')
-    return redirect(url_for('index'))
+# --- ROUTES PAYPAL SUPPRIMÉES ---
+# @app.route('/paypal-success')
+# @app.route('/paypal-cancel')
+# @app.route('/paypal-webhook')
+# --- FIN ROUTES PAYPAL SUPPRIMÉES ---
 
 
 # --- ROUTES D'ADMINISTRATION (Protégées) ---
@@ -229,7 +218,7 @@ def admin_set_admin(user_id):
 @app.route('/generate', methods=['POST'])
 @login_required
 def generate_foreedge_form():
-    if not current_user.is_premium and not current_user.is_admin: # L'admin peut aussi générer
+    if not current_user.is_premium and not current_user.is_admin: 
         flash("Vous devez avoir un abonnement actif pour générer des PDFs.", 'danger')
         return redirect(url_for('subscribe'))
 
@@ -308,7 +297,7 @@ def generate_foreedge_form():
             flash("Échec inattendu lors de la génération des tranches (aucun dossier retourné).", 'danger')
             return redirect(url_for('index'))
 
-        # MODIFICATION: Passer le chemin de sortie final du PDF à la fonction de génération de PDF
+        # Passer le chemin de sortie final du PDF à la fonction de génération de PDF
         pdf_final_path_actual, erreur_pdf = generer_pdf_a_partir_tranches(
             dossier_tranches_source=dossier_tranches_genere,
             hauteur_livre_mm_pdf=hauteur_livre, 
@@ -356,7 +345,7 @@ def generate_foreedge_form():
             except OSError as e:
                 print(f"Erreur lors du nettoyage du dossier temporaire '{temp_tranches_dir}': {e}")
         
-        # NOUVEAU: Nettoyage du PDF final généré
+        # Nettoyage du PDF final généré
         # Il est essentiel de supprimer le PDF après l'envoi pour éviter la saturation du disque sur Render.
         if 'pdf_final_path' in locals() and os.path.exists(pdf_final_path):
             try:
@@ -364,145 +353,6 @@ def generate_foreedge_form():
                 print(f"DEBUG: Fichier PDF généré '{pdf_final_path}' supprimé après envoi.")
             except OSError as e:
                 print(f"Erreur lors du nettoyage du fichier PDF généré '{pdf_final_path}': {e}")
-
-# NOUVEAU: Variables d'environnement pour l'API PayPal (Client ID et Secret)
-PAYPAL_CLIENT_ID = os.environ.get('PAYPAL_CLIENT_ID')
-PAYPAL_API_SECRET = os.environ.get('PAYPAL_API_SECRET')
-# L'ID du webhook (webhook_id) est fourni par PayPal dans les en-têtes du webhook,
-# mais vous devez aussi le récupérer lors de la création du webhook dans votre tableau de bord
-# pour le passer à l'API de vérification.
-PAYPAL_WEBHOOK_ID_CONFIGURED = os.environ.get('PAYPAL_WEBHOOK_ID') # Ce n'est PAS un secret
-
-# MODIFICATION CLÉ : L'URL de base de l'API PayPal est maintenant une variable d'environnement
-# Utilisez 'https://api-m.paypal.com' pour la production
-# Utilisez 'https://api-m.sandbox.paypal.com' pour le sandbox
-PAYPAL_API_BASE_URL = os.environ.get('PAYPAL_API_BASE_URL', 'https://api-m.sandbox.paypal.com') # Valeur par défaut pour le dev/test
-
-
-@app.route('/paypal-webhook', methods=['POST'])
-def paypal_webhook():
-    # Vérifier si les identifiants API nécessaires sont définis
-    if not PAYPAL_CLIENT_ID or not PAYPAL_API_SECRET or not PAYPAL_WEBHOOK_ID_CONFIGURED:
-        print("Erreur: Identifiants API PayPal (CLIENT_ID, API_SECRET ou WEBHOOK_ID) non définis. Impossible de vérifier le webhook.")
-        # Important : renvoyer un 200 OK pour ne pas désactiver le webhook chez PayPal,
-        # mais loguer l'erreur côté serveur.
-        return jsonify({"status": "error", "message": "PayPal API credentials missing"}), 200
-
-    try:
-        # Obtenir les en-têtes nécessaires à la vérification
-        transmission_id = request.headers.get('Paypal-Transmission-Id')
-        timestamp = request.headers.get('Paypal-Transmission-Time')
-        # La signature est envoyée par PayPal dans l'en-tête, mais nous ne la vérifions pas directement ici
-        # car nous utilisons l'API de vérification.
-        paypal_transmission_sig = request.headers.get('Paypal-Transmission-Sig') # Toujours la récupérer
-
-        # Récupérer le corps de la requête JSON
-        request_body = request.data.decode('utf-8')
-        event = json.loads(request_body)
-
-        # Construire le payload pour l'API de vérification de webhook de PayPal
-        # Utiliser l'ID du webhook configuré sur PayPal
-        verification_payload = {
-            "webhook_id": PAYPAL_WEBHOOK_ID_CONFIGURED,
-            "transmission_id": transmission_id,
-            "transmission_time": timestamp,
-            "cert_url": request.headers.get('Paypal-Cert-Url'), # URL du certificat PayPal
-            "auth_algo": request.headers.get('Paypal-Auth-Algo'), # Algorithme d'authentification
-            "transmission_sig": paypal_transmission_sig, # Signature fournie par PayPal
-            "webhook_event": event # Le corps complet de l'événement webhook
-        }
-
-        # MODIFICATION CLÉ : Utiliser la variable PAYPAL_API_BASE_URL
-        paypal_api_base_url = PAYPAL_API_BASE_URL 
-
-        # Obtenir un token d'accès (Bearer token)
-        auth_response = requests.post(
-            f"{paypal_api_base_url}/v1/oauth2/token",
-            auth=(PAYPAL_CLIENT_ID, PAYPAL_API_SECRET),
-            data={"grant_type": "client_credentials"}
-        )
-        auth_response.raise_for_status() # Lève une exception pour les codes d'état d'erreur HTTP
-        access_token = auth_response.json().get("access_token")
-
-        if not access_token:
-            print("Erreur: Impossible d'obtenir le token d'accès PayPal.")
-            return jsonify({"status": "error", "message": "Failed to get PayPal access token"}), 500
-
-        # Appel à l'API de vérification de webhook de PayPal
-        verify_response = requests.post(
-            f"{paypal_api_base_url}/v1/notifications/verify-webhook-signature",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {access_token}"
-            },
-            json=verification_payload
-        )
-        verify_response.raise_for_status() # Lève une exception pour les codes d'état d'erreur HTTP
-        verification_status = verify_response.json().get("verification_status")
-
-        if verification_status != 'SUCCESS':
-            print(f"Échec de la vérification du webhook PayPal: {verification_status}")
-            return jsonify({"status": "error", "message": "Webhook verification failed", "details": verification_status}), 403 # Forbidden
-
-        print(f"Webhook PayPal vérifié avec succès: {verification_status}")
-
-        # Traiter l'événement après vérification réussie
-        event_type = event.get('event_type')
-        resource = event.get('resource')
-
-        print(f"Webhook PayPal reçu: Type d'événement: {event_type}")
-
-        if event_type == 'BILLING.SUBSCRIPTION.ACTIVATED':
-            subscription_id = resource.get('id')
-            subscriber_email = resource.get('subscriber', {}).get('email_address')
-
-            if subscriber_email:
-                user = User.query.filter_by(email=subscriber_email).first()
-                if user:
-                    user.is_premium = True
-                    user.premium_until = date.today() + timedelta(days=30)
-                    db.session.commit()
-                    print(f"Utilisateur {user.email} abonnement activé via webhook. Subscription ID: {subscription_id}")
-                    return jsonify({"status": "success", "message": "Subscription activated"}), 200
-                else:
-                    print(f"Utilisateur non trouvé pour l'email {subscriber_email} (activation).")
-                    return jsonify({"status": "error", "message": "User not found"}), 404
-            else:
-                print("Email de l'abonné non trouvé dans le webhook d'activation.")
-                return jsonify({"status": "error", "message": "Subscriber email not found"}), 400
-
-        elif event_type == 'BILLING.SUBSCRIPTION.CANCELLED':
-            subscription_id = resource.get('id')
-            subscriber_email = resource.get('subscriber', {}).get('email_address')
-            if subscriber_email:
-                user = User.query.filter_by(email=subscriber_email).first()
-                if user:
-                    user.is_premium = False
-                    user.premium_until = None
-                    db.session.commit()
-                    print(f"Utilisateur {user.email} abonnement annulé via webhook. Subscription ID: {subscription_id}")
-                    return jsonify({"status": "success", "message": "Subscription cancelled"}), 200
-                else:
-                    print(f"Utilisateur non trouvé pour l'email {subscriber_email} (annulation).")
-                    return jsonify({"status": "error", "message": "User not found for cancellation"}), 404
-            else:
-                print("Email de l'abonné non trouvé dans le webhook d'annulation.")
-                return jsonify({"status": "error", "message": "Subscriber email not found for cancellation"}), 400
-
-        # Gérer d'autres types d'événements si nécessaire
-        else:
-            print(f"Type d'événement non géré par cette logique: {event_type}")
-            return jsonify({"status": "success", "message": "Event received but not processed"}), 200 # Toujours renvoyer 200 pour les événements non gérés
-
-    except json.JSONDecodeError:
-        print("Erreur: Corps de requête du webhook non valide JSON.")
-        return jsonify({"status": "error", "message": "Invalid JSON in request body"}), 400
-    except requests.exceptions.RequestException as req_e:
-        print(f"Erreur lors de l'appel à l'API PayPal: {req_e}")
-        return jsonify({"status": "error", "message": f"PayPal API communication error: {req_e}"}), 500
-    except Exception as e:
-        print(f"Erreur inattendue lors du traitement du webhook PayPal: {e}")
-        return jsonify({"status": "error", "message": f"Internal server error: {e}"}), 500
 
 
 if __name__ == '__main__':

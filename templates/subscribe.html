@@ -28,9 +28,23 @@
             margin-bottom: 20px;
             line-height: 1.5;
         }
-        /* Style pour le conteneur du bouton PayPal */
-        .paypal-button-container {
+        .gumroad-button-container { /* Nouveau style pour le bouton Gumroad */
             margin-top: 30px;
+        }
+        .gumroad-button { /* Style de base pour un bouton simple */
+            background-color: #337ab7; /* Une couleur bleue pour contraster */
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            cursor: pointer;
+            text-decoration: none; /* Pour enlever le soulignement du lien */
+            display: inline-block; /* Pour que le padding fonctionne bien */
+            transition: background-color 0.3s ease;
+        }
+        .gumroad-button:hover {
+            background-color: #286090;
         }
         .flash-messages {
             list-style: none;
@@ -78,45 +92,15 @@
         <p>Obtenez un accès complet au générateur de PDF pour seulement **9,00 € par mois**.</p>
         <p>Profitez de toutes les fonctionnalités sans restrictions.</p>
 
-        <div class="paypal-button-container">
-            {# Votre code de bouton PayPal commence ici #}
-            <div id="paypal-button-container-P-30266484WM466860YNBDLGBI"></div>
-            <script src="https://www.paypal.com/sdk/js?client-id=AR4lniNTpjb4JTkF0aesbyOznMoywg4e0oHi0HVdyNGiIkWdf-T6P0TI5hzsRqYZyKwMD3oINqfov0B6&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script>
-            <script>
-                paypal.Buttons({
-                    style: {
-                        shape: 'pill',
-                        color: 'blue',
-                        layout: 'vertical',
-                        label: 'subscribe'
-                    },
-                    createSubscription: function(data, actions) {
-                        return actions.subscription.create({
-                            /* Creates the subscription */
-                            plan_id: 'P-30266484WM466860YNBDLGBI'
-                        });
-                    },
-                    onApprove: function(data, actions) {
-                        // Redirige l'utilisateur vers votre page de succès Flask
-                        // data.subscriptionID contient l'ID de l'abonnement PayPal, utile pour la vérification future.
-                        window.location.href = "{{ url_for('paypal_success') }}?subscription_id=" + data.subscriptionID;
-                    },
-                    onCancel: function(data) {
-                        // Redirige l'utilisateur vers votre page d'annulation Flask
-                        window.location.href = "{{ url_for('paypal_cancel') }}";
-                    },
-                    onError: function(err) {
-                        // Gère les erreurs de paiement
-                        console.error('Erreur PayPal:', err);
-                        window.location.href = "{{ url_for('paypal_cancel') }}"; // Traite l'erreur comme une annulation
-                    }
-                }).render('#paypal-button-container-P-30266484WM466860YNBDLGBI'); // Renders the PayPal button
-            </script>
-            {# Votre code de bouton PayPal se termine ici #}
+        <div class="gumroad-button-container">
+            {# Ce lien sera remplacé par l'URL de votre produit d'abonnement Gumroad #}
+            <a href="URL_DE_VOTRE_PRODUIT_ABONNEMENT_GUMROAD" target="_blank" class="gumroad-button">
+                S'abonner via Gumroad
+            </a>
         </div>
 
         <p style="margin-top: 30px;">
-            <small>Après le paiement, votre compte sera activé manuellement ou après vérification. Merci de votre patience !</small>
+            <small>Après le paiement sur Gumroad, votre compte sera activé manuellement par l'administrateur. Merci de votre patience !</small>
         </p>
         <p><a href="{{ url_for('index') }}">Retour à l'accueil</a></p>
     </div>
