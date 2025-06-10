@@ -1,6 +1,9 @@
-from app import app, db, User, ContactMessage # AJOUT DE ContactMessage
+from app import app, db, User, Ticket, TicketMessage # AJOUT DE Ticket et TicketMessage
 
 with app.app_context():
+    # ATTENTION: Si vous aviez des messages de contact importants dans l'ancienne table 'contact_message',
+    # ils seront perdus car db.create_all() ne gère pas les migrations de schéma complexes.
+    # Cette commande va créer les nouvelles tables 'ticket' et 'ticket_message'.
     db.create_all()
     print("Database tables created (or already existed).")
     # Si vous avez un utilisateur admin initial, vous pouvez le créer ici si la DB est vide.
