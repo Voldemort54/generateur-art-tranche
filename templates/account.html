@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Mon Compte - Générateur d'Art sur Tranche{% endblock %}
+
+{% block content %}
+    <div class="content-container">
+        <style>
+            /* Styles spécifiques à account.html */
+            .content-container h1 {
+                color: #2c3e50;
+                text-align: center;
+                margin-bottom: 30px;
+                font-size: 2.2em;
+            }
+            .account-info p {
+                font-size: 1.1em;
+                margin-bottom: 15px;
+                color: #555;
+            }
+            .account-info strong {
+                color: #2c3e50;
+            }
+            .premium-status {
+                padding: 15px;
+                border-radius: 8px;
+                margin-top: 20px;
+                font-size: 1.05em;
+                font-weight: bold;
+                text-align: center;
+            }
+            .premium-status.active {
+                background-color: #d4edda;
+                color: #155724;
+                border: 1px solid #c3e6cb;
+            }
+            .premium-status.inactive {
+                background-color: #f8d7da;
+                color: #721c24;
+                border: 1px solid #f5c6cb;
+            }
+            .premium-status a {
+                color: #0c5460;
+                text-decoration: underline;
+                font-weight: bold;
+            }
+            .premium-status a:hover {
+                text-decoration: none;
+            }
+            .account-actions {
+                margin-top: 30px;
+                text-align: center;
+            }
+            .account-actions button {
+                background-color: #007bff;
+                color: white;
+                padding: 12px 25px;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 1em;
+                transition: background-color 0.3s ease, transform 0.2s ease;
+                box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
+            }
+            .account-actions button:hover {
+                background-color: #0056b3;
+                transform: translateY(-2px);
+            }
+            .account-actions .danger-button {
+                background-color: #dc3545;
+                margin-left: 15px;
+            }
+            .account-actions .danger-button:hover {
+                background-color: #c82333;
+            }
+            .back-link {
+                display: block;
+                text-align: center;
+                margin-top: 40px;
+                font-size: 1.1em;
+            }
+            .back-link a {
+                color: #007bff;
+                text-decoration: none;
+            }
+            .back-link a:hover {
+                text-decoration: underline;
+            }
+        </style>
+
+        <h1>Mon Compte</h1>
+
+        <div class="account-info">
+            <p><strong>Email :</strong> {{ current_user.email }}</p>
+            <p><strong>Statut :</strong> {{ 'Administrateur' if current_user.is_admin else 'Utilisateur standard' }}</p>
+
+            <div class="premium-status {% if current_user.is_premium %}active{% else %}inactive{% endif %}">
+                {% if current_user.is_premium %}
+                    Votre abonnement Premium est ACTIF !
+                    {% if current_user.premium_until %}
+                        (Expire le {{ current_user.premium_until.strftime('%d/%m/%Y') }})
+                    {% endif %}
+                {% else %}
+                    Votre abonnement est INACTIF. <a href="{{ url_for('subscribe') }}">Abonnez-vous ici</a> pour accéder à toutes les fonctionnalités.
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="account-actions">
+            {# Vous pourriez ajouter ici des options comme "Changer de mot de passe" ou "Gérer mon abonnement" (si Stripe est configuré pour un portail client) #}
+            {# Pour l'instant, c'est principalement pour l'information #}
+        </div>
+
+        <p class="back-link"><a href="{{ url_for('app_dashboard') }}">Retour à l'application</a></p>
+    </div>
+{% endblock %}

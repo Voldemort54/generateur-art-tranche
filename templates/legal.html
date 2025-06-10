@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informations Légales - Générateur d'Art sur Tranche</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            padding: 35px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+        }
+        h2 {
+            color: #333;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.6em;
+        }
+        p, li {
+            font-size: 1em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            color: #555;
+        }
+        ul {
+            list-style: disc;
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 40px;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Informations Légales</h1>
+
+        <h2>Mentions Légales</h2>
+        <p><strong>Nom du site :</strong> Générateur d'Art sur Tranche de Livre</p>
+        <p><strong>Éditeur du site :</strong> [Votre Nom ou Pseudo]</p>
+        <p><strong>Contact :</strong> [Votre adresse e-mail de contact]</p>
+        <p><strong>Hébergeur :</strong> Render (render.com)</p>
+        <p>Ce site est un service de générateur de motifs numériques pour tranches de livres.</p>
+
+        <h2>Conditions Générales d'Utilisation (CGU)</h2>
+        <p>En utilisant ce site, vous acceptez les présentes conditions d'utilisation. Nous nous réservons le droit de les modifier à tout moment.</p>
+        <p>[Ajoutez ici votre texte complet des CGU. Exemples :]</p>
+        <ul>
+            <li>Utilisation personnelle et non-commerciale.</li>
+            <li>Respect des droits d'auteur pour les images téléchargées.</li>
+            <li>Responsabilité limitée de l'éditeur.</li>
+            <li>Gestion des comptes et des abonnements.</li>
+            <li>...</li>
+        </ul>
+
+        <h2>Politique de Confidentialité (RGPD)</h2>
+        <p>Nous collectons les informations suivantes pour le bon fonctionnement du site et la gestion des abonnements :</p>
+        <ul>
+            <li>Adresse e-mail (pour la création de compte et la communication).</li>
+            <li>Données d'abonnement (statut Premium, date de fin, etc.).</li>
+            <li>Données d'utilisation techniques (logs de connexion, adresse IP - standard via l'hébergeur).</li>
+        </ul>
+        <p>Vos données sont utilisées uniquement dans le cadre des services proposés par le site. Elles ne sont ni vendues, ni partagées avec des tiers à des fins commerciales. Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, de suppression et d'opposition sur vos données personnelles. Pour exercer ces droits, veuillez nous contacter à l'adresse e-mail ci-dessus.</p>
+
+        <p class="back-link"><a href="{{ url_for('public_home') }}">Retour à l'accueil</a></p>
+    </div>
+</body>
+</html>

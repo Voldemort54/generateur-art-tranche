@@ -94,8 +94,6 @@ def admin_required(f):
 # ROUTE PRINCIPALE : Page d'accueil publique (TOUJOURS HOME.HTML)
 @app.route('/')
 def public_home():
-    # MODIFICATION: Suppression de la redirection pour les utilisateurs connectés
-    # La page d'accueil est toujours la page de présentation
     return render_template('home.html') 
 
 # ROUTE DE L'APPLICATION (le générateur) : Protégée par @login_required
@@ -182,6 +180,17 @@ def subscribe():
     site_base_url = "https://generateur-art-tranche.onrender.com" 
     return render_template('subscribe.html', site_base_url=site_base_url)
 
+# NOUVELLE ROUTE: Page d'informations légales
+@app.route('/legal')
+def legal_info():
+    return render_template('legal.html')
+
+# NOUVELLE ROUTE: Page de gestion de compte utilisateur
+@app.route('/account')
+@login_required # Seuls les utilisateurs connectés peuvent y accéder
+def account_management():
+    # current_user est disponible grâce à @login_required
+    return render_template('account.html', current_user=current_user)
 
 # --- ROUTES D'ADMINISTRATION (Protégées) ---
 @app.route('/admin')
@@ -215,7 +224,7 @@ def admin_set_admin(user_id):
     user.is_admin = not user.is_admin # Inverse le statut admin
     db.session.commit()
     flash(f"Statut administrateur de '{user.email}' changé à {user.is_admin}.", 'info')
-    print(f"ADMIN ACTION: {user.email} admin status set to {user.is_admin}.")
+    print(f"ADMIN ACTION: {user.email} admin status set to {user.is_user}.")
     return redirect(url_for('admin_dashboard'))
 
 

@@ -6,12 +6,13 @@
     <title>Générateur d'Art sur Tranche de Livre - Accueil</title>
     <style>
         body {
-            font-family: 'Inter', sans-serif; /* Utilisation d'Inter si disponible */
+            font-family: 'Inter', sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f0f2f5; /* Un gris clair moderne */
+            background-color: #f0f2f5;
             color: #333;
             display: flex;
+            flex-direction: column; /* Utiliser column pour le footer */
             justify-content: center;
             align-items: center;
             min-height: 100vh;
@@ -22,15 +23,19 @@
             margin: 20px;
             background-color: #ffffff;
             padding: 40px;
-            border-radius: 12px; /* Coins plus arrondis */
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); /* Ombre plus prononcée */
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease-in-out;
+            flex-grow: 1; /* Permet au container de prendre de l'espace */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         .container:hover {
-            transform: translateY(-5px); /* Petit effet au survol */
+            transform: translateY(-5px);
         }
         h1 {
-            color: #2c3e50; /* Un bleu foncé élégant */
+            color: #2c3e50;
             margin-bottom: 20px;
             font-size: 2.5em;
             line-height: 1.2;
@@ -44,34 +49,35 @@
         .buttons-group {
             display: flex;
             justify-content: center;
-            gap: 20px; /* Espace entre les boutons */
-            flex-wrap: wrap; /* Pour la réactivité mobile */
+            gap: 20px;
+            flex-wrap: wrap;
         }
         .button {
-            background-color: #007bff; /* Bleu primaire */
+            background-color: #007bff;
             color: white;
             padding: 14px 28px;
             border: none;
-            border-radius: 8px; /* Bords arrondis */
+            border-radius: 8px;
             cursor: pointer;
             font-size: 1.1em;
             text-decoration: none;
             transition: background-color 0.3s ease, transform 0.2s ease;
-            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2); /* Ombre sur le bouton */
+            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
         }
         .button:hover {
             background-color: #0056b3;
-            transform: translateY(-2px); /* Effet au survol */
+            transform: translateY(-2px);
         }
         .button.secondary {
-            background-color: #6c757d; /* Gris secondaire */
+            background-color: #6c757d;
             box-shadow: 0 4px 8px rgba(108, 117, 125, 0.2);
         }
         .button.secondary:hover {
             background-color: #5a6268;
         }
         .footer-links {
-            margin-top: 40px;
+            margin-top: auto; /* Pousse le footer vers le bas du container */
+            padding-top: 40px; /* Espace au-dessus des liens */
             font-size: 0.9em;
             color: #777;
         }
@@ -100,7 +106,7 @@
                 gap: 15px;
             }
             .button {
-                width: 80%; /* Occupe plus de largeur sur mobile */
+                width: 80%;
                 margin: 0 auto;
             }
         }
@@ -118,6 +124,7 @@
         </div>
 
         <div class="footer-links">
+            <a href="{{ url_for('legal_info') }}">Mentions Légales / CGU / RGPD</a>
             <p>&copy; 2025 Générateur d'Art sur Tranche. Tous droits réservés.</p>
         </div>
     </div>
