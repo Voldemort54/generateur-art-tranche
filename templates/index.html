@@ -151,23 +151,22 @@
                     <input type="file" id="image_source" name="image_source" accept="image/*" required>
 
                     <label for="feuilles_avant_premiere_page">Nombre de feuilles avant la page numérotée 1 :</label>
-                    <input type="number" id="feuilles_avant_premiere_page" name="feuilles_avant_premiere_page" value="" min="0" required oninput="calculerNombrePages()" step="1">
+                    <input type="number" id="feuilles_avant_premiere_page" name="feuilles_avant_premiere_page" value="" min="0" required oninput="validateIntegerInput(this); calculerNombrePages();" step="1">
 
                     <label for="derniere_page_numerotee">Numéro de la dernière page numérotée :</label>
-                    <input type="number" id="derniere_page_numerotee" name="derniere_page_numerotee" value="" min="1" required oninput="calculerNombrePages()" step="1">
+                    <input type="number" id="derniere_page_numerotee" name="derniere_page_numerotee" value="" min="1" required oninput="validateIntegerInput(this); calculerNombrePages();" step="1">
 
                     <label for="feuilles_apres_derniere_page">Nombre de feuilles après la dernière page numérotée :</label>
-                    <input type="number" id="feuilles_apres_derniere_page" name="feuilles_apres_derniere_page" value="" min="0" required oninput="calculerNombrePages()" step="1">
+                    <input type="number" id="feuilles_apres_derniere_page" name="feuilles_apres_derniere_page" value="" min="0" required oninput="validateIntegerInput(this); calculerNombrePages();" step="1">
 
-                    {# CHAMP D'AFFICHAGE COMBINÉ DES RÉSULTATS (NOM MIS À JOUR) #}
                     <label for="pages_tranches_calculees">Nombre total de pages et de tranches (calculé automatiquement) :</label>
                     <input type="text" id="pages_tranches_calculees" name="pages_tranches_calculees_display" value="" readonly>
 
                     <label for="hauteur_livre">Hauteur des pages du livre en millimètres :</label>
-                    <input type="number" id="hauteur_livre" name="hauteur_livre" value="" min="1" required oninput="calculerNombrePages()" step="1">
+                    <input type="number" id="hauteur_livre" name="hauteur_livre" value="" min="1" required oninput="validateIntegerInput(this); calculerNombrePages();" step="1">
 
                     <label for="largeur_tranche_etiree_cible">Largeur des bandes imprimée en millimètres (valeur recommandée) :</label>
-                    <input type="number" id="largeur_tranche_etiree_cible" name="largeur_tranche_etiree_cible" value="10" required step="1">
+                    <input type="number" id="largeur_tranche_etiree_cible" name="largeur_tranche_etiree_cible" value="10" required oninput="validateIntegerInput(this); calculerNombrePages();" step="1">
                     
                     <button type="submit">Générer le PDF</button>
                 </form>
@@ -189,19 +188,35 @@
     </div>
 
     <script>
+        // Fonction pour valider et nettoyer les entrées numériques (strictement entières)
+        function validateIntegerInput(inputElement) {
+            // Supprime tout caractère qui n'est pas un chiffre
+            inputElement.value = inputElement.value.replace(/[^0-9]/g, '');
+            // Si la valeur résultante est vide, assure que l'input reste vide (pas de NaN)
+            if (inputElement.value === '') {
+                return; // Ne fait rien d'autre si l'input est vide
+            }
+            // Assure que la valeur est un nombre entier si elle n'est pas vide (gère le "0" en tête)
+            // C'est déjà géré par parseInt(value, 10) qui est implicite, mais ça ne fait pas de mal.
+            // inputElement.value = parseInt(inputElement.value, 10); // Cette ligne n'est pas strictement nécessaire ici si le calcul s'en occupe
+        }
+
         function calculerNombrePages() {
             // Récupérer les éléments input
             let feuillesAvantInput = document.getElementById('feuilles_avant_premiere_page');
             let dernierePageInput = document.getElementById('derniere_page_numerotee');
             let feuillesApresInput = document.getElementById('feuilles_apres_derniere_page');
+            let hauteurLivreInput = document.getElementById('hauteur_livre');
+            let largeurTrancheInput = document.getElementById('largeur_tranche_etiree_cible');
             let resultField = document.getElementById('pages_tranches_calculees');
 
-            // Récupérer les valeurs brutes
+            // Récupérer les valeurs brutes. Ces valeurs sont déjà filtrées par validateIntegerInput.
             let valFeuillesAvant = feuillesAvantInput.value;
             let valDernierePage = dernierePageInput.value;
             let valFeuillesApres = feuillesApresInput.value;
 
             // Parser les valeurs en nombres. isNaN(parseInt(val)) vérifiera si l'entrée est non numérique
+            // Si le champ est vide (après validateIntegerInput), parseInt renverra NaN, qui est ensuite géré.
             let feuillesAvant = parseInt(valFeuillesAvant);
             let dernierePage = parseInt(valDernierePage);
             let feuillesApres = parseInt(valFeuillesApres);
@@ -210,9 +225,10 @@
 
             // --- Validation pour l'affichage du calcul des pages/tranches ---
             // Vérifie si un champ a une valeur ET si cette valeur est invalide (non-numérique ou négative)
+            // (La validation est plus douce ici pour l'affichage dynamique, la validation du formulaire est plus stricte)
             if (valFeuillesAvant !== "" && (isNaN(feuillesAvant) || feuillesAvant < 0)) {
                 displayErrorMessage = "Feuilles avant: entier >= 0";
-            } else if (valDernierePage !== "" && (isNaN(dernierePage) || dernierePage < 0)) { // Autoriser 0 ici pour calcul intermédiaire
+            } else if (valDernierePage !== "" && (isNaN(dernierePage) || dernierePage < 0)) { 
                 displayErrorMessage = "Dernière page: entier >= 0";
             } else if (valFeuillesApres !== "" && (isNaN(feuillesApres) || feuillesApres < 0)) {
                 displayErrorMessage = "Feuilles après: entier >= 0";
@@ -235,6 +251,7 @@
             }
 
             // S'assurer que les valeurs utilisées pour le calcul sont 0 si elles étaient non-numériques ou vides
+            // (après le parseInt et la validation, cela devrait être des nombres ou NaN)
             feuillesAvant = isNaN(feuillesAvant) ? 0 : feuillesAvant;
             dernierePage = isNaN(dernierePage) ? 0 : dernierePage;
             feuillesApres = isNaN(feuillesApres) ? 0 : feuillesApres;
@@ -245,7 +262,7 @@
             // Calcul du nombre de tranches (chaque tranche correspond à une feuille)
             let nombreTranchesCalcule = Math.ceil(nombrePagesCalcule / 2);
 
-            // Validation finale du nombre de pages calculé
+            // Validation finale du nombre de pages calculé (pour l'affichage)
             if (nombrePagesCalcule < 1) { // Si le calcul aboutit à moins de 1 page
                  resultField.value = "Total pages < 1";
                  return;
