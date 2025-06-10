@@ -519,48 +519,40 @@ def generate_foreedge_form():
 
         # Récupérer et valider les 3 éléments de saisie pour le calcul des pages
         try:
-            # Assurez-vous que les valeurs sont non vides avant de tenter la conversion
-            derniere_page_numerotee_str = request.form.get('derniere_page_numerotee', '')
-            feuilles_avant_premiere_page_str = request.form.get('feuilles_avant_premiere_page', '')
-            feuilles_apres_derniere_page_str = request.form.get('feuilles_apres_derniere_page', '')
-            hauteur_livre_str = request.form.get('hauteur_livre', '')
-            largeur_tranche_etiree_cible_str = request.form.get('largeur_tranche_etiree_cible', '')
+            # Récupérer les valeurs brutes (peuvent être vides ou non numériques)
+            derniere_page_numerotee_str = request.form.get('derniere_page_numerotee', '').strip()
+            feuilles_avant_premiere_page_str = request.form.get('feuilles_avant_premiere_page', '').strip()
+            feuilles_apres_derniere_page_str = request.form.get('feuilles_apres_derniere_page', '').strip()
+            hauteur_livre_str = request.form.get('hauteur_livre', '').strip()
+            largeur_tranche_etiree_cible_str = request.form.get('largeur_tranche_etiree_cible', '').strip()
 
-            # Validation côté serveur pour les champs de formulaire vides ou non numériques
-            if not derniere_page_numerotee_str.strip():
-                raise ValueError("Numéro de la dernière page numérotée est requis.")
-            if not feuilles_avant_premiere_page_str.strip():
-                raise ValueError("Nombre de feuilles avant est requis.")
-            if not feuilles_apres_derniere_page_str.strip():
-                raise ValueError("Nombre de feuilles après est requis.")
-            if not hauteur_livre_str.strip():
-                raise ValueError("Hauteur des pages du livre est requise.")
-            if not largeur_tranche_etiree_cible_str.strip():
-                raise ValueError("Largeur des bandes imprimée est requise.")
+            # DEBUG: Afficher les valeurs brutes reçues du formulaire
+            print(f"DEBUG FORM DATA: derniere_page_numerotee_str='{derniere_page_numerotee_str}'")
+            print(f"DEBUG FORM DATA: feuilles_avant_premiere_page_str='{feuilles_avant_premiere_page_str}'")
+            print(f"DEBUG FORM DATA: feuilles_apres_derniere_page_str='{feuilles_apres_derniere_page_str}'")
+            print(f"DEBUG FORM DATA: hauteur_livre_str='{hauteur_livre_str}'")
+            print(f"DEBUG FORM DATA: largeur_tranche_etiree_cible_str='{largeur_tranche_etiree_cible_str}'")
+            
+            # Validation et conversion
+            def validate_and_convert_int(value_str, field_name, min_val=None):
+                if not value_str:
+                    raise ValueError(f"{field_name} est requis.")
+                if not value_str.isdigit(): # Vérifie si c'est composé uniquement de chiffres
+                    raise ValueError(f"{field_name} doit être un nombre entier.")
+                val_int = int(value_str)
+                if min_val is not None and val_int < min_val:
+                    raise ValueError(f"{field_name} doit être au moins {min_val}.")
+                return val_int
 
-            # Conversion en entier (même pour hauteur/largeur si step="1")
-            derniere_page_numerotee = int(derniere_page_numerotee_str)
-            feuilles_avant_premiere_page = int(feuilles_avant_premiere_page_str)
-            feuilles_apres_derniere_page = int(feuilles_apres_derniere_page_str)
-            hauteur_livre = int(hauteur_livre_str) # Conversion en int
-            largeur_tranche_etiree_cible = int(largeur_tranche_etiree_cible_str) # Conversion en int
-
-            # Validation des valeurs minimales côté serveur
-            if derniere_page_numerotee < 1:
-                raise ValueError("Le numéro de la dernière page numérotée doit être au moins 1.")
-            if feuilles_avant_premiere_page < 0:
-                raise ValueError("Le nombre de feuilles avant ne peut pas être négatif.")
-            if feuilles_apres_derniere_page < 0:
-                raise ValueError("Le nombre de feuilles après ne peut pas être négatif.")
-            if hauteur_livre < 1:
-                raise ValueError("La hauteur des pages du livre doit être au moins 1mm.")
-            if largeur_tranche_etiree_cible < 1:
-                raise ValueError("La largeur des bandes imprimée doit être au moins 1mm.")
+            derniere_page_numerotee = validate_and_convert_int(derniere_page_numerotee_str, "Numéro de la dernière page numérotée", min_val=1)
+            feuilles_avant_premiere_page = validate_and_convert_int(feuilles_avant_premiere_page_str, "Nombre de feuilles avant", min_val=0)
+            feuilles_apres_derniere_page = validate_and_convert_int(feuilles_apres_derniere_page_str, "Nombre de feuilles après", min_val=0)
+            hauteur_livre = validate_and_convert_int(hauteur_livre_str, "Hauteur des pages du livre", min_val=1)
+            largeur_tranche_etiree_cible = validate_and_convert_int(largeur_tranche_etiree_cible_str, "Largeur des bandes imprimée", min_val=1)
 
             # Calcul du nombre total de pages (chaque feuille = 2 pages)
             nombre_pages_calcule = derniere_page_numerotee + (feuilles_avant_premiere_page * 2) + (feuilles_apres_derniere_page * 2)
             
-            # Validation finale du nombre de pages calculé
             if nombre_pages_calcule < 2: # Au moins 2 pages pour un motif
                 raise ValueError("Le nombre total de pages doit être d'au moins 2 pour générer un motif.")
 
@@ -577,7 +569,7 @@ def generate_foreedge_form():
             chemin_image_source=filepath,
             hauteur_livre_mm=hauteur_livre,
             nombre_pages_livre=nombre_pages_calcule,
-            dpi_utilise=dpi_utilise,
+            dpi_utilise=300, # DPI fixe
             largeur_tranche_etiree_cible_mm=largeur_tranche_etiree_cible,
             progress_callback=lambda val, msg: None
         )
@@ -613,7 +605,7 @@ def generate_foreedge_form():
 
         flash('Votre PDF a été généré avec succès ! Cliquez sur le lien pour télécharger.', 'success')
         session['last_generated_pdf_filename'] = os.path.basename(pdf_final_path_actual)
-        session['last_simulation_image_url'] = None
+        session['last_simulation_image_url'] = None # Pas de simulation
 
         return redirect(url_for('app_dashboard'))
 
@@ -637,7 +629,8 @@ def generate_foreedge_form():
             except OSError as e:
                 print(f"Erreur lors du nettoyage du dossier temporaire '{temp_tranches_dir}': {e}")
         
-        # Le dossier SIMULATION_IMG_FOLDER n'est plus utilisé pour le nettoyage direct ici.
+        # Les fichiers PDF et simulation ne sont PAS supprimés ici immédiatement,
+        # car ils doivent être accessibles pour le téléchargement.
 
 
 @app.route('/generated-pdfs/<path:filename>')
