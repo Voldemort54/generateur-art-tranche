@@ -8,10 +8,9 @@ from datetime import datetime, date, timedelta
 import secrets
 import functools
 import json
-import math # NOUVEAU: Import pour math.ceil
+import math # Import nécessaire pour math.ceil
 
 # Importez vos fonctions de traitement d'image depuis le dossier core_logic
-# MODIFICATION: Suppression de l'import de generer_image_simulation_livre
 from core_logic.image_processing import generer_tranches_individuelles, generer_pdf_a_partir_tranches
 
 app = Flask(__name__)
@@ -23,7 +22,6 @@ app.secret_key = os.environ.get('SECRET_KEY', 'votre_cle_secrete_de_secours_ici_
 db_uri_env = os.environ.get('DATABASE_URL')
 print(f"DEBUG: DATABASE_URL from environment: {db_uri_env}")
 if db_uri_env:
-    # Correction pour SQLAlchemy 2.0 qui attend le schéma 'postgresql://'
     app.config['SQLALCHEMY_DATABASE_URI'] = db_uri_env.replace("postgres://", "postgresql://", 1)
     print("DEBUG: Using DATABASE_URL from environment.")
 else:
@@ -103,15 +101,13 @@ def load_user(user_id):
 UPLOAD_FOLDER = os.path.join(app.root_path, 'uploads')
 GENERATED_PDF_FOLDER = os.path.join(app.root_path, 'generated_pdfs')
 TEMP_PROCESSING_FOLDER = os.path.join(app.root_path, 'temp_processing')
-# MODIFICATION: Suppression du dossier SIMULATION_IMG_FOLDER
-# SIMULATION_IMG_FOLDER = os.path.join(app.root_path, 'simulation_images')
+SIMULATION_IMG_FOLDER = os.path.join(app.root_path, 'simulation_images')
 
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(GENERATED_PDF_FOLDER, exist_ok=True)
 os.makedirs(TEMP_PROCESSING_FOLDER, exist_ok=True)
-# os.makedirs(SIMULATION_IMG_FOLDER, exist_ok=True) # Suppression de la création du dossier
-
+os.makedirs(SIMULATION_IMG_FOLDER, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp'}
 
@@ -140,9 +136,9 @@ def public_home():
 @app.route('/app')
 @login_required 
 def app_dashboard():
-    # MODIFICATION: Ne plus récupérer les variables de simulation de la session
-    simulation_image_url = None
-    last_generated_pdf_filename = None
+    # Récupérer les chemins de la session si une génération vient d'avoir lieu
+    simulation_image_url = session.pop('last_simulation_image_url', None)
+    last_generated_pdf_filename = session.pop('last_generated_pdf_filename', None)
     
     # Calculer les jours restants si premium
     days_remaining = None
@@ -162,8 +158,8 @@ def app_dashboard():
         return redirect(url_for('subscribe'))
     
     return render_template('index.html', is_premium=current_user.is_premium, days_remaining=days_remaining, 
-                           simulation_image_url=simulation_image_url, # Passé comme None
-                           last_generated_pdf_filename=last_generated_pdf_filename) # Passé comme None
+                           simulation_image_url=simulation_image_url, 
+                           last_generated_pdf_filename=last_generated_pdf_filename)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -512,11 +508,6 @@ def generate_foreedge_form():
     unique_filename = f"{original_filename_base}_{timestamp}{original_filename_ext}"
     filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
     
-    # MODIFICATION: Suppression du chemin de l'image de simulation
-    # simulation_output_filename = f"simulation_{timestamp}.png"
-    # simulation_final_path = os.path.join(SIMULATION_IMG_FOLDER, simulation_output_filename)
-
-    # Chemin pour le PDF généré
     pdf_output_filename = f"foreedge_pattern_{timestamp}.pdf"
     pdf_final_path = os.path.join(GENERATED_PDF_FOLDER, pdf_output_filename)
 
@@ -526,42 +517,59 @@ def generate_foreedge_form():
     try:
         file.save(filepath)
 
-        # Récupérer les 3 éléments de saisie pour le calcul des pages
+        # Récupérer et valider les 3 éléments de saisie pour le calcul des pages
         try:
-            derniere_page_numerotee = int(request.form['derniere_page_numerotee'])
-            feuilles_avant_premiere_page = int(request.form['feuilles_avant_premiere_page'])
-            feuilles_apres_derniere_page = int(request.form['feuilles_apres_derniere_page'])
+            # Assurez-vous que les valeurs sont non vides avant de tenter la conversion
+            derniere_page_numerotee_str = request.form.get('derniere_page_numerotee', '')
+            feuilles_avant_premiere_page_str = request.form.get('feuilles_avant_premiere_page', '')
+            feuilles_apres_derniere_page_str = request.form.get('feuilles_apres_derniere_page', '')
+            hauteur_livre_str = request.form.get('hauteur_livre', '')
+            largeur_tranche_etiree_cible_str = request.form.get('largeur_tranche_etiree_cible', '')
+
+            # Validation côté serveur pour les champs de formulaire vides ou non numériques
+            if not derniere_page_numerotee_str.strip():
+                raise ValueError("Numéro de la dernière page numérotée est requis.")
+            if not feuilles_avant_premiere_page_str.strip():
+                raise ValueError("Nombre de feuilles avant est requis.")
+            if not feuilles_apres_derniere_page_str.strip():
+                raise ValueError("Nombre de feuilles après est requis.")
+            if not hauteur_livre_str.strip():
+                raise ValueError("Hauteur des pages du livre est requise.")
+            if not largeur_tranche_etiree_cible_str.strip():
+                raise ValueError("Largeur des bandes imprimée est requise.")
+
+            # Conversion en entier (même pour hauteur/largeur si step="1")
+            derniere_page_numerotee = int(derniere_page_numerotee_str)
+            feuilles_avant_premiere_page = int(feuilles_avant_premiere_page_str)
+            feuilles_apres_derniere_page = int(feuilles_apres_derniere_page_str)
+            hauteur_livre = int(hauteur_livre_str) # Conversion en int
+            largeur_tranche_etiree_cible = int(largeur_tranche_etiree_cible_str) # Conversion en int
+
+            # Validation des valeurs minimales côté serveur
+            if derniere_page_numerotee < 1:
+                raise ValueError("Le numéro de la dernière page numérotée doit être au moins 1.")
+            if feuilles_avant_premiere_page < 0:
+                raise ValueError("Le nombre de feuilles avant ne peut pas être négatif.")
+            if feuilles_apres_derniere_page < 0:
+                raise ValueError("Le nombre de feuilles après ne peut pas être négatif.")
+            if hauteur_livre < 1:
+                raise ValueError("La hauteur des pages du livre doit être au moins 1mm.")
+            if largeur_tranche_etiree_cible < 1:
+                raise ValueError("La largeur des bandes imprimée doit être au moins 1mm.")
 
             # Calcul du nombre total de pages (chaque feuille = 2 pages)
             nombre_pages_calcule = derniere_page_numerotee + (feuilles_avant_premiere_page * 2) + (feuilles_apres_derniere_page * 2)
             
-            # Calcul du nombre de tranches (une tranche par feuille)
-            nombre_tranches_calcule = math.ceil(nombre_pages_calcule / 2)
-
-
-            if derniere_page_numerotee <= 0 or feuilles_avant_premiere_page < 0 or feuilles_apres_derniere_page < 0:
-                raise ValueError("Les nombres de pages/feuilles doivent être positifs.")
-            if nombre_pages_calcule < 2:
+            # Validation finale du nombre de pages calculé
+            if nombre_pages_calcule < 2: # Au moins 2 pages pour un motif
                 raise ValueError("Le nombre total de pages doit être d'au moins 2 pour générer un motif.")
-
-
-            hauteur_livre = float(request.form['hauteur_livre'])
-            if hauteur_livre <= 0:
-                raise ValueError("La hauteur du livre doit être une valeur positive.")
-            
-            largeur_tranche_etiree_cible = float(request.form['largeur_tranche_etiree_cible'])
-            if largeur_tranche_etiree_cible <= 0:
-                raise ValueError("La largeur de la tranche imprimée doit être une valeur positive.")
-                
-            debut_numero_tranche = int(request.form['debut_numero_tranche'])
-            pas_numero_tranche = 2 
-            dpi_utilise = 300 
 
         except ValueError as ve:
             flash(f"Erreur de saisie : {ve}. Veuillez vérifier vos paramètres numériques.", 'danger')
             return redirect(url_for('app_dashboard'))
         except Exception as e:
             flash(f"Une erreur est survenue lors de la validation des paramètres : {e}", 'danger')
+            print(f"Erreur inattendue lors de la validation des paramètres (app.py): {e}")
             return redirect(url_for('app_dashboard'))
 
 
@@ -582,20 +590,13 @@ def generate_foreedge_form():
             flash("Échec inattendu lors de la génération des tranches (aucun dossier retourné).", 'danger')
             return redirect(url_for('app_dashboard'))
 
-        # MODIFICATION: Suppression de l'appel à generer_image_simulation_livre
-        # simulation_path_actual, erreur_simulation = generer_image_simulation_livre(...)
-        # if erreur_simulation: ...
-        # simulation_image_url = url_for('get_simulation_image', filename=os.path.basename(simulation_final_path))
-        simulation_image_url = None # Plus de simulation
 
-
-        # Passer le chemin de sortie final du PDF à la fonction de génération de PDF
         pdf_final_path_actual, erreur_pdf = generer_pdf_a_partir_tranches(
             dossier_tranches_source=dossier_tranches_genere,
             hauteur_livre_mm_pdf=hauteur_livre, 
             largeur_tranche_etiree_cible_mm_pdf=largeur_tranche_etiree_cible,
-            debut_numero_tranche=debut_numero_tranche,
-            pas_numero_tranche=pas_numero_tranche,
+            debut_numero_tranche=1,
+            pas_numero_tranche=2,
             progress_callback=lambda val, msg: None,
             image_source_original_path=filepath,
             nombre_pages_livre_original=nombre_pages_calcule,
@@ -611,19 +612,17 @@ def generate_foreedge_form():
             return redirect(url_for('app_dashboard'))
 
         flash('Votre PDF a été généré avec succès ! Cliquez sur le lien pour télécharger.', 'success')
-        # Stocker le nom du fichier PDF dans la session (plus de simulation_image_url)
         session['last_generated_pdf_filename'] = os.path.basename(pdf_final_path_actual)
-        session['last_simulation_image_url'] = None # Supprimer la session simulation URL
+        session['last_simulation_image_url'] = None
 
         return redirect(url_for('app_dashboard'))
 
 
     except Exception as e:
         flash(f"Une erreur inattendue est survenue : {e}", 'danger')
-        print(f"Erreur inattendue dans /generate: {e}")
+        print(f"Erreur inattendue dans /generate (bloc principal): {e}")
         return redirect(url_for('app_dashboard'))
     finally:
-        # Nettoyage des fichiers temporaires après traitement
         if os.path.exists(filepath): 
             try:
                 os.remove(filepath)
@@ -638,24 +637,9 @@ def generate_foreedge_form():
             except OSError as e:
                 print(f"Erreur lors du nettoyage du dossier temporaire '{temp_tranches_dir}': {e}")
         
-        # Les fichiers PDF ne sont PAS supprimés ici immédiatement,
-        # car ils doivent être accessibles pour le téléchargement.
-        # NOUVEAU: Suppression du nettoyage de la simulation ici
-        # if 'simulation_final_path' in locals() and os.path.exists(simulation_final_path):
-        #    try:
-        #        os.remove(simulation_final_path)
-        #        print(f"DEBUG: Fichier simulation '{simulation_final_path}' supprimé après envoi.")
-        #    except OSError as e:
-        #        print(f"Erreur lors du nettoyage du fichier simulation '{simulation_final_path}': {e}")
+        # Le dossier SIMULATION_IMG_FOLDER n'est plus utilisé pour le nettoyage direct ici.
 
 
-# MODIFICATION: Suppression de la route pour servir les images de simulation
-# @app.route('/simulation-images/<path:filename>')
-# def get_simulation_image(filename):
-#     from flask import send_from_directory
-#     return send_from_directory(SIMULATION_IMG_FOLDER, filename)
-
-# NOUVEAU: Route pour servir les PDF générés (cette route est conservée)
 @app.route('/generated-pdfs/<path:filename>')
 def get_generated_pdf(filename):
     from flask import send_from_directory
