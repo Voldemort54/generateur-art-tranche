@@ -134,6 +134,17 @@
                 background-color: #0056b3;
                 transform: translateY(-2px);
             }
+            .ticket-closed-message {
+                text-align: center;
+                padding: 20px;
+                background-color: #f8d7da; /* Rouge clair pour l'erreur */
+                color: #721c24;
+                border: 1px solid #f5c6cb;
+                border-radius: 8px;
+                margin-top: 30px;
+                font-size: 1.1em;
+                font-weight: bold;
+            }
             .back-link {
                 display: block;
                 text-align: center;
@@ -179,15 +190,19 @@
             {% endfor %}
         </div>
 
-        {# Formulaire de réponse pour l'utilisateur #}
-        <div class="reply-form-section">
-            <h2>Répondre au ticket</h2>
-            <form method="POST" action="{{ url_for('account_ticket_detail', ticket_id=ticket.id) }}">
-                <label for="message_content">Votre message :</label>
-                <textarea id="message_content" name="message_content" required></textarea>
-                <button type="submit">Envoyer la réponse</button>
-            </form>
-        </div>
+        {# NOUVEAU: Affichage conditionnel du formulaire de réponse #}
+        {% if ticket.status != 'Fermé' %}
+            <div class="reply-form-section">
+                <h2>Répondre au ticket</h2>
+                <form method="POST" action="{{ url_for('account_ticket_detail', ticket_id=ticket.id) }}">
+                    <label for="message_content">Votre message :</label>
+                    <textarea id="message_content" name="message_content" required></textarea>
+                    <button type="submit">Envoyer la réponse</button>
+                </form>
+            </div>
+        {% else %}
+            <p class="ticket-closed-message">Ce ticket est actuellement fermé. Vous ne pouvez plus y répondre.</p>
+        {% endif %}
 
         <p class="back-link"><a href="{{ url_for('account_tickets') }}">Retour à Mes tickets</a></p>
     </div>

@@ -298,29 +298,30 @@ def account_tickets():
         TicketMessage.is_read_by_user == False # Non lu par l'utilisateur
     ).count()
 
-    # Mettre à jour le statut de lecture de l'utilisateur lorsqu'il consulte la liste des tickets
-    # Ceci est fait ici pour marquer comme lu le badge si l'utilisateur vient sur cette page
-    # Mais les messages individuels ne sont marqués lus que dans le détail du ticket
-    
     # On ajoute un attribut temporaire pour savoir si le ticket a des messages non lus par l'utilisateur
     for ticket in user_tickets:
         ticket.has_unread_messages_by_user = False
-        for message in ticket.messages:
-            if message.sender_type == 'admin' and not message.is_read_by_user:
-                ticket.has_unread_messages_by_user = True
-                break # Un seul message non lu suffit à marquer le ticket comme non lu
+        # Un ticket a des messages non lus par l'utilisateur si le dernier message est de l'admin et non lu par l'utilisateur
+        last_message = TicketMessage.query.filter_by(ticket_id=ticket.id).order_by(TicketMessage.timestamp.desc()).first()
+        if last_message and last_message.sender_type == 'admin' and not last_message.is_read_by_user:
+             ticket.has_unread_messages_by_user = True
 
     return render_template('account_tickets.html', tickets=user_tickets, user_unread_tickets_count=user_unread_tickets_count)
 
 
 # MODIFICATION: Afficher un fil de discussion de ticket spécifique pour l'utilisateur
 # ET Gérer la réponse de l'utilisateur
-@app.route('/account/tickets/<int:ticket_id>', methods=['GET', 'POST']) # AJOUT DE methods=['POST']
+@app.route('/account/tickets/<int:ticket_id>', methods=['GET', 'POST'])
 @login_required
 def account_ticket_detail(ticket_id):
     ticket = Ticket.query.filter_by(id=ticket_id, user_id=current_user.id).first_or_404()
     
     if request.method == 'POST':
+        # NOUVEAU: Empêcher la réponse si le ticket est fermé
+        if ticket.status == 'Fermé':
+            flash("Ce ticket est fermé et ne peut plus recevoir de réponses.", 'warning')
+            return redirect(url_for('account_ticket_detail', ticket_id=ticket.id))
+
         message_content = request.form['message_content']
         if not message_content:
             flash('Le message de réponse ne peut pas être vide.', 'danger')
@@ -363,7 +364,7 @@ def admin_dashboard():
     unread_tickets_count = db.session.query(Ticket).join(TicketMessage).filter(
         TicketMessage.sender_type == 'user',
         TicketMessage.is_read_by_admin == False
-    ).count()
+    ).group_by(Ticket.id).count() # Utilise group_by pour compter les tickets uniques
 
     return render_template('admin.html', users=users, unread_tickets_count=unread_tickets_count)
 
@@ -389,10 +390,10 @@ def admin_tickets():
     # On ajoute un attribut temporaire pour savoir si le ticket a des messages non lus par l'admin.
     for ticket in tickets:
         ticket.has_unread_messages_by_admin = False
-        for msg in ticket.messages:
-            if msg.sender_type == 'user' and not msg.is_read_by_admin:
-                ticket.has_unread_messages_by_admin = True
-                break # Un seul message non lu suffit pour marquer le ticket comme non lu
+        # Un ticket a des messages non lus par l'admin si le dernier message est de l'utilisateur et non lu par l'admin
+        last_message = TicketMessage.query.filter_by(ticket_id=ticket.id).order_by(TicketMessage.timestamp.desc()).first()
+        if last_message and last_message.sender_type == 'user' and not last_message.is_read_by_admin:
+             ticket.has_unread_messages_by_admin = True
 
     return render_template('admin_tickets.html', tickets=tickets, filter_email=filter_email, filter_status=filter_status)
 
@@ -417,7 +418,8 @@ def admin_ticket_detail(ticket_id):
                 )
                 db.session.add(new_message)
                 # Mettre à jour le statut du ticket si l'admin répond
-                ticket.status = 'En attente (réponse utilisateur)' # Statut mis à jour pour l'utilisateur
+                # Et s'assurer que le statut est mis à jour pour inciter l'utilisateur à voir la réponse
+                ticket.status = 'En attente (réponse utilisateur)' 
                 db.session.commit()
                 flash('Votre réponse a été envoyée au ticket.', 'success')
                 return redirect(url_for('admin_ticket_detail', ticket_id=ticket.id))
@@ -435,7 +437,6 @@ def admin_ticket_detail(ticket_id):
     return render_template('admin_ticket_detail.html', ticket=ticket)
 
 # Pour marquer un ticket (et tous ses messages utilisateur) comme lu par l'admin
-# Cette route peut être utilisée pour marquer un ticket comme lu sans entrer dans le détail
 @app.route('/admin/tickets/mark-as-read/<int:ticket_id>', methods=['POST'])
 @admin_required
 def admin_mark_ticket_as_read(ticket_id):
@@ -475,7 +476,7 @@ def admin_change_ticket_status(ticket_id):
 # Suppression d'un TICKET entier (et de ses messages via cascade)
 @app.route('/admin/tickets/delete/<int:ticket_id>', methods=['POST'])
 @admin_required
-def admin_delete_ticket(ticket_id): # Renommé de admin_delete_message
+def admin_delete_ticket(ticket_id):
     ticket = Ticket.query.get_or_404(ticket_id)
     try:
         db.session.delete(ticket)
