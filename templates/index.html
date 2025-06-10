@@ -165,14 +165,13 @@
                     <input type="text" id="pages_tranches_calculees" name="pages_tranches_calculees_display" value="0 pages / 0 tranches" readonly>
 
                     <label for="hauteur_livre">Hauteur du livre (mm) :</label>
-                    <input type="number" id="hauteur_livre" name="hauteur_livre" min="1" required oninput="calculerNombrePages()"> {# Min 1 pour éviter division par zéro ou taille négative #}
+                    <input type="number" id="hauteur_livre" name="hauteur_livre" min="1" required oninput="calculerNombrePages()">
 
                     <label for="largeur_tranche_etiree_cible">Largeur de la tranche imprimée (mm) :</label>
-                    <input type="number" id="largeur_tranche_etiree_cible" name="largeur_tranche_etiree_cible" value="10.0" step="0.1" required>
+                    {# MODIFIÉ : step="0.1" supprimé pour n'accepter que des entiers, value="10" #}
+                    <input type="number" id="largeur_tranche_etiree_cible" name="largeur_tranche_etiree_cible" value="10" required>
 
                     {# SUPPRIMÉ : Ancien champ debut_numero_tranche #}
-                    {# <label for="debut_numero_tranche">Numéro de la première page :</label> #}
-                    {# <input type="number" id="debut_numero_tranche" name="debut_numero_tranche" value="1" required> #}
                     
                     <button type="submit">Générer le PDF</button>
                 </form>
@@ -207,17 +206,19 @@
             let feuillesAvantPremierePage = parseInt(document.getElementById('feuilles_avant_premiere_page').value) || 0;
             let dernierePageNumerotee = parseInt(document.getElementById('derniere_page_numerotee').value) || 0;
             let feuillesApresDernierePage = parseInt(document.getElementById('feuilles_apres_derniere_page').value) || 0;
-            let hauteurLivre = parseFloat(document.getElementById('hauteur_livre').value) || 0; // Récupérer la hauteur aussi pour la validation
+            let hauteurLivre = parseFloat(document.getElementById('hauteur_livre').value) || 0; 
+            // MODIFIÉ : largeurTranche est maintenant un entier, utilise parseInt
+            let largeurTranche = parseInt(document.getElementById('largeur_tranche_etiree_cible').value) || 0;
+
 
             // Calcul du nombre total de pages
             let nombrePagesCalcule = dernierePageNumerotee + (feuillesAvantPremierePage * 2) + (feuillesApresDernierePage * 2);
             
-            // Calcul du nombre de tranches (chaque tranche correspond à une feuille)
-            // On prend math.ceil car on arrondit toujours au supérieur pour le nombre de tranches.
-            let nombreTranchesCalcule = Math.ceil(nombrePagesCalcule / 2);
+            // Calcul du nombre de tranches (une tranche par feuille)
+            let nombreTranchesCalcule = Math.ceil(nombrePagesCalcule / 2); // Math.ceil pour arrondir au supérieur
 
             // Gérer les cas où les valeurs sont non-numériques ou négatives pour l'affichage
-            if (dernierePageNumerotee < 0 || feuillesAvantPremierePage < 0 || feuillesApresDernierePage < 0 || hauteurLivre <= 0) {
+            if (dernierePageNumerotee < 0 || feuillesAvantPremierePage < 0 || feuillesApresDernierePage < 0 || hauteurLivre <= 0 || largeurTranche <= 0) {
                  document.getElementById('pages_tranches_calculees').value = "Valeurs invalides";
                  return; // Arrêter la fonction si les valeurs sont invalides
             }
