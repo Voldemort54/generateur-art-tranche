@@ -128,8 +128,11 @@
                 margin-left: 10px;
                 transition: background-color 0.3s ease;
             }
-            .message-actions a:hover {
-                background-color: #0056b3;
+            .message-actions a.delete-button { /* Style pour le bouton supprimer */
+                background-color: #dc3545; /* Rouge */
+            }
+            .message-actions a.delete-button:hover {
+                background-color: #c82333;
             }
             .no-messages {
                 text-align: center;
@@ -189,6 +192,10 @@
                                     <span>Lu</span>
                                 {% endif %}
                                 <a href="mailto:{{ message.sender_email }}?subject=RE: {{ message.subject }}" target="_blank">Répondre</a>
+                                {# NOUVEAU: Bouton Supprimer #}
+                                <form action="{{ url_for('admin_delete_message', message_id=message.id) }}" method="post" style="display:inline; margin-left: 10px;" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce message ? Cette action est irréversible.');">
+                                    <button type="submit" class="delete-button" style="background-color: #dc3545;">Supprimer</button>
+                                </form>
                             </div>
                         </div>
                     </div>

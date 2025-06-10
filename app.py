@@ -220,7 +220,7 @@ def contact_page():
                 sender_email=sender_email,
                 subject=subject,
                 message_content=message_content,
-                is_read=False # NOUVEAU: Marqué comme non lu par défaut
+                is_read=False # Marqué comme non lu par défaut
             )
             db.session.add(new_message)
             db.session.commit()
@@ -248,12 +248,12 @@ def account_management():
 @admin_required 
 def admin_dashboard():
     users = User.query.all()
-    # NOUVEAU: Récupérer le nombre de messages non lus pour le badge
+    # Récupérer le nombre de messages non lus pour le badge
     unread_messages_count = ContactMessage.query.filter_by(is_read=False).count()
     return render_template('admin.html', users=users, unread_messages_count=unread_messages_count)
 
-# AJOUT: Route pour consulter les messages de contact (pour l'admin)
-@app.route('/admin/contact-messages', methods=['GET']) # Ajout de methods=['GET'] explicite
+# Route pour consulter les messages de contact (pour l'admin)
+@app.route('/admin/contact-messages', methods=['GET'])
 @admin_required
 def admin_contact_messages():
     # Permettre le filtrage par email de l'expéditeur
@@ -285,6 +285,20 @@ def admin_mark_message_as_read(message_id):
             flash(f"Erreur lors de la mise à jour du message: {e}", 'danger')
     return redirect(url_for('admin_contact_messages'))
 
+# NOUVELLE ROUTE: Pour supprimer un message
+@app.route('/admin/contact-messages/delete/<int:message_id>', methods=['POST'])
+@admin_required
+def admin_delete_message(message_id):
+    message = ContactMessage.query.get_or_404(message_id)
+    try:
+        db.session.delete(message)
+        db.session.commit()
+        flash(f"Message de '{message.sender_email}' (ID: {message.id}) supprimé avec succès.", 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erreur lors de la suppression du message: {e}", 'danger')
+    return redirect(url_for('admin_contact_messages'))
+
 
 @app.route('/admin/toggle-premium/<int:user_id>', methods=['POST'])
 @admin_required
@@ -310,7 +324,6 @@ def admin_set_admin(user_id):
     user.is_admin = not user.is_admin
     db.session.commit()
     flash(f"Statut administrateur de '{user.email}' changé à {user.is_admin}.", 'info')
-    # CORRECTION: Était is_user, doit être is_admin
     print(f"ADMIN ACTION: {user.email} admin status set to {user.is_admin}.")
     return redirect(url_for('admin_dashboard'))
 
