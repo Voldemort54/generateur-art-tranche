@@ -159,14 +159,13 @@
                     <label for="feuilles_apres_derniere_page">Nombre de feuilles après la dernière page numérotée :</label>
                     <input type="number" id="feuilles_apres_derniere_page" name="feuilles_apres_derniere_page" value="" min="0" required oninput="calculerNombrePages()" step="1">
 
-                    {# CHAMP D'AFFICHAGE COMBINÉ DES RÉSULTATS (NOM MIS À JOUR) #}
                     <label for="pages_tranches_calculees">Nombre total de pages et de tranches (calculé automatiquement) :</label>
                     <input type="text" id="pages_tranches_calculees" name="pages_tranches_calculees_display" value="" readonly>
 
-                    <label for="hauteur_livre">Hauteur des pages du livre en millimètres :</label> {# LABEL MIS À JOUR #}
+                    <label for="hauteur_livre">Hauteur des pages du livre en millimètres :</label>
                     <input type="number" id="hauteur_livre" name="hauteur_livre" value="" min="1" required oninput="calculerNombrePages()" step="1">
 
-                    <label for="largeur_tranche_etiree_cible">Largeur des bandes imprimée en millimètres (valeur recommandée) :</label> {# LABEL MIS À JOUR #}
+                    <label for="largeur_tranche_etiree_cible">Largeur des bandes imprimée en millimètres (valeur recommandée) :</label>
                     <input type="number" id="largeur_tranche_etiree_cible" name="largeur_tranche_etiree_cible" value="10" required step="1">
                     
                     <button type="submit">Générer le PDF</button>
@@ -194,45 +193,39 @@
             let feuillesAvantInput = document.getElementById('feuilles_avant_premiere_page');
             let dernierePageInput = document.getElementById('derniere_page_numerotee');
             let feuillesApresInput = document.getElementById('feuilles_apres_derniere_page');
-            let hauteurLivreInput = document.getElementById('hauteur_livre');
-            let largeurTrancheInput = document.getElementById('largeur_tranche_etiree_cible');
             let resultField = document.getElementById('pages_tranches_calculees');
 
-            // Convertir les valeurs en nombres. Utiliser 0 pour les champs vides ou non-numériques pour le calcul,
-            // mais l'affichage des erreurs sera géré par les messages.
+            // Convertir les valeurs en nombres. Utiliser 0 pour les champs vides ou non-numériques
             let feuillesAvant = parseInt(feuillesAvantInput.value) || 0;
             let dernierePage = parseInt(dernierePageInput.value) || 0;
             let feuillesApres = parseInt(feuillesApresInput.value) || 0;
-            let hauteurLivre = parseInt(hauteurLivreInput.value) || 0; /* Changed to parseInt */
-            let largeurTranche = parseInt(largeurTrancheInput.value) || 0;
 
-            let errorMessage = "";
+            let displayErrorMessage = "";
 
-            // Validation des champs individuels selon leurs contraintes min et type
+            // --- Validation pour l'affichage du calcul des pages/tranches ---
+            // Ces validations sont plus souples pour l'affichage en temps réel.
             if (isNaN(feuillesAvant) || feuillesAvant < 0) {
-                errorMessage = "Feuilles avant: entier >= 0";
-            } else if (isNaN(dernierePage) || dernierePage < 1) {
-                errorMessage = "Dernière page: entier >= 1";
+                displayErrorMessage = "Feuilles avant: entier >= 0";
+            } else if (isNaN(dernierePage) || dernierePage < 0) { // Autoriser 0 ici pour calcul, min="1" HTML fera la validation
+                displayErrorMessage = "Dernière page: entier >= 0";
             } else if (isNaN(feuillesApres) || feuillesApres < 0) {
-                errorMessage = "Feuilles après: entier >= 0";
-            } else if (isNaN(hauteurLivre) || hauteurLivre < 1) {
-                errorMessage = "Hauteur livre: entier >= 1mm";
-            } else if (isNaN(largeurTranche) || largeurTranche < 1) {
-                errorMessage = "Largeur tranche: entier >= 1mm";
+                displayErrorMessage = "Feuilles après: entier >= 0";
             }
+            
+            // Vérifier si au moins un des champs de pages est non vide et valide numériquement
+            const anyPageFieldHasValidValue = (feuillesAvantInput.value !== "" && !isNaN(feuillesAvant)) ||
+                                              (dernierePageInput.value !== "" && !isNaN(dernierePage)) ||
+                                              (feuillesApresInput.value !== "" && !isNaN(feuillesApres));
 
-            // Si une erreur de validation est présente, l'afficher et ne pas calculer
-            if (errorMessage) {
-                resultField.value = errorMessage;
-                return; 
-            }
-
-            // Vérifier si au moins l'un des champs de "pages" a une valeur pour déclencher le calcul
-            const anyPageFieldHasValue = feuillesAvantInput.value !== "" || dernierePageInput.value !== "" || feuillesApresInput.value !== "";
-
-            if (!anyPageFieldHasValue) {
-                resultField.value = ""; // Laisser le champ vide si aucun champ de pages n'est rempli
+            if (!anyPageFieldHasValidValue) {
+                resultField.value = ""; // Laisser le champ vide si aucun champ de pages n'a de valeur valide
                 return;
+            }
+
+            // Si une erreur de validation pour les PAGES est présente, l'afficher et ne pas calculer
+            if (displayErrorMessage) {
+                resultField.value = displayErrorMessage;
+                return; 
             }
 
             // Calcul du nombre total de pages
@@ -241,9 +234,9 @@
             // Calcul du nombre de tranches (chaque tranche correspond à une feuille)
             let nombreTranchesCalcule = Math.ceil(nombrePagesCalcule / 2);
 
-            // Validation finale du nombre de pages calculé
-            if (nombrePagesCalcule < 1) {
-                 resultField.value = "Total pages < 1"; // Message si le calcul aboutit à moins de 1 page
+            // Validation finale du nombre de pages calculé (pour l'affichage)
+            if (nombrePagesCalcule < 1) { // Si le calcul aboutit à moins de 1 page
+                 resultField.value = "Total pages < 1";
                  return;
             }
 
@@ -252,6 +245,8 @@
         }
 
         // Appeler la fonction au chargement de la page pour initialiser les valeurs
+        // On ne met pas de valeurs par défaut dans le HTML, donc le calcul initial sera vide.
+        // Si l'utilisateur entre une valeur, le calcul se déclenchera.
         document.addEventListener('DOMContentLoaded', calculerNombrePages);
     </script>
 {% endblock %}
