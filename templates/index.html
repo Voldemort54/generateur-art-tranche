@@ -31,6 +31,12 @@
                 box-sizing: border-box;
                 font-size: 1em;
             }
+            /* Style spécifique pour les champs de calcul readonly */
+            .content-container input[type="text"][readonly] {
+                background-color: #e9ecef; /* Couleur de fond pour indiquer non-modifiable */
+                color: #495057;
+                cursor: not-allowed;
+            }
             .content-container button[type="submit"] {
                 background-color: #007bff;
                 color: white;
@@ -69,14 +75,14 @@
                 font-size: 1.05em;
             }
             .content-container .premium-message {
-                background-color: #e2f0d9; /* Vert clair */
+                background-color: #e2f0d9;
                 border-color: #badbcc;
-                color: #1a642e; /* Vert foncé */
+                color: #1a642e;
             }
             .content-container .non-premium-message {
-                background-color: #ffeeba; /* Jaune clair */
+                background-color: #ffeeba;
                 border-color: #ffdf7e;
-                color: #856404; /* Jaune foncé */
+                color: #856404;
             }
             .content-container .non-premium-message a {
                 color: #856404;
@@ -85,6 +91,47 @@
             }
             .content-container .non-premium-message a:hover {
                 text-decoration: none;
+            }
+            /* Styles pour les résultats de génération */
+            .results-section {
+                margin-top: 40px;
+                padding-top: 30px;
+                border-top: 1px dashed #eee;
+                text-align: center;
+            }
+            .results-section h2 {
+                color: #2c3e50;
+                margin-bottom: 20px;
+                font-size: 1.8em;
+            }
+            .simulation-image-container {
+                margin-bottom: 20px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            }
+            .simulation-image-container img {
+                max-width: 100%;
+                height: auto;
+                display: block;
+            }
+            .download-button {
+                background-color: #28a745;
+                color: white;
+                padding: 12px 25px;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 1.1em;
+                text-decoration: none;
+                transition: background-color 0.3s ease, transform 0.2s ease;
+                box-shadow: 0 4px 8px rgba(40, 167, 69, 0.2);
+                display: inline-block;
+            }
+            .download-button:hover {
+                background-color: #218838;
+                transform: translateY(-2px);
             }
             /* Réactivité pour les petits écrans */
             @media (max-width: 600px) {
@@ -115,8 +162,22 @@
                     <label for="image_source">Image source :</label>
                     <input type="file" id="image_source" name="image_source" accept="image/*" required>
 
-                    <label for="nombre_pages">Nombre de pages du livre :</label>
-                    <input type="number" id="nombre_pages" name="nombre_pages" value="579" min="2" required>
+                    {# NOUVEAUX CHAMPS DE SAISIE POUR LE CALCUL DU NOMBRE DE PAGES #}
+                    <label for="derniere_page_numerotee">Numéro de la dernière page numérotée :</label>
+                    <input type="number" id="derniere_page_numerotee" name="derniere_page_numerotee" value="579" min="1" required oninput="calculerNombrePages()">
+
+                    <label for="feuilles_avant_premiere_page">Nombre de feuilles avant la page numérotée 1 :</label>
+                    <input type="number" id="feuilles_avant_premiere_page" name="feuilles_avant_premiere_page" value="0" min="0" required oninput="calculerNombrePages()">
+
+                    <label for="feuilles_apres_derniere_page">Nombre de feuilles après la dernière page numérotée :</label>
+                    <input type="number" id="feuilles_apres_derniere_page" name="feuilles_apres_derniere_page" value="0" min="0" required oninput="calculerNombrePages()">
+
+                    {# CHAMPS AFFICHANT LES RÉSULTATS DU CALCUL (NON MODIFIABLES) #}
+                    <label for="nombre_pages_calcule">Nombre total de pages du livre (calculé) :</label>
+                    <input type="text" id="nombre_pages_calcule" name="nombre_pages_calcule_display" value="579" readonly>
+
+                    <label for="nombre_tranches_calcule">Nombre de tranches (calculé) :</label>
+                    <input type="text" id="nombre_tranches_calcule" name="nombre_tranches_calcule_display" value="290" readonly>
 
                     <label for="hauteur_livre">Hauteur du livre (mm) :</label>
                     <input type="number" id="hauteur_livre" name="hauteur_livre" value="225.0" step="0.1" required>
@@ -127,8 +188,29 @@
                     <label for="debut_numero_tranche">Numéro de la première page :</label>
                     <input type="number" id="debut_numero_tranche" name="debut_numero_tranche" value="1" required>
                     
-                    <button type="submit">Générer le PDF</button>
+                    <button type="submit">Générer le PDF et la simulation</button>
                 </form>
+
+                {# DEBUG: Afficher les valeurs des variables passées au template #}
+                <div style="background-color: #e0f2f7; padding: 10px; margin-top: 20px; border-radius: 5px; text-align: left; color: #006064;">
+                    <p>DEBUG HTML Jinja2 (variables passées au template):</p>
+                    <p>simulation_image_url: <strong>{{ simulation_image_url }}</strong></p>
+                    <p>last_generated_pdf_filename: <strong>{{ last_generated_pdf_filename }}</strong></p>
+                    <p>Condition d'affichage: <strong>{{ simulation_image_url is not none and last_generated_pdf_filename is not none }}</strong></p>
+                </div>
+                {# FIN DEBUG #}
+
+                {# Section pour afficher la simulation et le lien de téléchargement #}
+                {% if simulation_image_url and last_generated_pdf_filename %}
+                <div class="results-section">
+                    <h2>Votre Résultat</h2>
+                    <div class="simulation-image-container">
+                        <img src="{{ simulation_image_url }}" alt="Simulation de votre livre">
+                    </div>
+                    <a href="{{ url_for('get_generated_pdf', filename=last_generated_pdf_filename) }}" class="download-button">Télécharger le PDF</a>
+                </div>
+                {% endif %}
+
             {% else %}
                 <p class="non-premium-message">Vous n'avez pas d'abonnement actif. <a href="{{ url_for('subscribe') }}">Abonnez-vous ici</a> pour accéder au générateur de PDF.</p>
             {% endif %}
@@ -136,4 +218,28 @@
             <p style="text-align: center;">Veuillez vous connecter ou vous inscrire pour utiliser le générateur.</p>
         {% endif %}
     </div>
+
+    <script>
+        function calculerNombrePages() {
+            // Récupérer les valeurs des champs
+            let dernierePageNumerotee = parseInt(document.getElementById('derniere_page_numerotee').value) || 0;
+            let feuillesAvantPremierePage = parseInt(document.getElementById('feuilles_avant_premiere_page').value) || 0;
+            let feuillesApresDernierePage = parseInt(document.getElementById('feuilles_apres_derniere_page').value) || 0;
+
+            // Calculer le nombre total de pages
+            // Chaque feuille = 2 pages. Donc pages non numérotées = feuilles * 2
+            let nombrePagesCalcule = dernierePageNumerotee + (feuillesAvantPremierePage * 2) + (feuillesApresDernierePage * 2);
+
+            // Calculer le nombre de tranches (chaque tranche correspond à une feuille)
+            // C'est un arrondi au supérieur car même une page seule signifie une feuille.
+            let nombreTranchesCalcule = Math.ceil(nombrePagesCalcule / 2);
+
+            // Mettre à jour les champs non modifiables
+            document.getElementById('nombre_pages_calcule').value = nombrePagesCalcule;
+            document.getElementById('nombre_tranches_calcule').value = nombreTranchesCalcule;
+        }
+
+        // Appeler la fonction au chargement de la page pour initialiser les valeurs
+        document.addEventListener('DOMContentLoaded', calculerNombrePages);
+    </script>
 {% endblock %}
