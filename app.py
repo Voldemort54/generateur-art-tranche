@@ -8,9 +8,11 @@ from datetime import datetime, date, timedelta
 import secrets
 import functools
 import json
+import math # NOUVEAU: Import pour math.ceil
 
 # Importez vos fonctions de traitement d'image depuis le dossier core_logic
-from core_logic.image_processing import generer_tranches_individuelles, generer_pdf_a_partir_tranches, generer_image_simulation_livre
+# MODIFICATION: Suppression de l'import de generer_image_simulation_livre
+from core_logic.image_processing import generer_tranches_individuelles, generer_pdf_a_partir_tranches
 
 app = Flask(__name__)
 
@@ -101,13 +103,14 @@ def load_user(user_id):
 UPLOAD_FOLDER = os.path.join(app.root_path, 'uploads')
 GENERATED_PDF_FOLDER = os.path.join(app.root_path, 'generated_pdfs')
 TEMP_PROCESSING_FOLDER = os.path.join(app.root_path, 'temp_processing')
-SIMULATION_IMG_FOLDER = os.path.join(app.root_path, 'simulation_images')
+# MODIFICATION: Suppression du dossier SIMULATION_IMG_FOLDER
+# SIMULATION_IMG_FOLDER = os.path.join(app.root_path, 'simulation_images')
 
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(GENERATED_PDF_FOLDER, exist_ok=True)
 os.makedirs(TEMP_PROCESSING_FOLDER, exist_ok=True)
-os.makedirs(SIMULATION_IMG_FOLDER, exist_ok=True)
+# os.makedirs(SIMULATION_IMG_FOLDER, exist_ok=True) # Suppression de la création du dossier
 
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp'}
@@ -137,9 +140,9 @@ def public_home():
 @app.route('/app')
 @login_required 
 def app_dashboard():
-    # Récupérer les chemins de la session si une génération vient d'avoir lieu
-    simulation_image_url = session.pop('last_simulation_image_url', None)
-    last_generated_pdf_filename = session.pop('last_generated_pdf_filename', None)
+    # MODIFICATION: Ne plus récupérer les variables de simulation de la session
+    simulation_image_url = None
+    last_generated_pdf_filename = None
     
     # Calculer les jours restants si premium
     days_remaining = None
@@ -159,8 +162,8 @@ def app_dashboard():
         return redirect(url_for('subscribe'))
     
     return render_template('index.html', is_premium=current_user.is_premium, days_remaining=days_remaining, 
-                           simulation_image_url=simulation_image_url, 
-                           last_generated_pdf_filename=last_generated_pdf_filename)
+                           simulation_image_url=simulation_image_url, # Passé comme None
+                           last_generated_pdf_filename=last_generated_pdf_filename) # Passé comme None
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -509,21 +512,21 @@ def generate_foreedge_form():
     unique_filename = f"{original_filename_base}_{timestamp}{original_filename_ext}"
     filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
     
-    # Chemin pour l'image de simulation
-    simulation_output_filename = f"simulation_{timestamp}.png"
-    simulation_final_path = os.path.join(SIMULATION_IMG_FOLDER, simulation_output_filename)
+    # MODIFICATION: Suppression du chemin de l'image de simulation
+    # simulation_output_filename = f"simulation_{timestamp}.png"
+    # simulation_final_path = os.path.join(SIMULATION_IMG_FOLDER, simulation_output_filename)
 
     # Chemin pour le PDF généré
     pdf_output_filename = f"foreedge_pattern_{timestamp}.pdf"
     pdf_final_path = os.path.join(GENERATED_PDF_FOLDER, pdf_output_filename)
 
     temp_tranches_dir = os.path.join(app.root_path, 'temp_processing', f"session_{timestamp}_{secrets.token_hex(8)}")
-    os.makedirs(temp_tranches_dir, exist_ok=True) # Assurez-vous que le dossier temp_processing existe
+    os.makedirs(temp_tranches_dir, exist_ok=True)
 
     try:
         file.save(filepath)
 
-        # NOUVEAU: Récupérer les 3 éléments de saisie pour le calcul des pages
+        # Récupérer les 3 éléments de saisie pour le calcul des pages
         try:
             derniere_page_numerotee = int(request.form['derniere_page_numerotee'])
             feuilles_avant_premiere_page = int(request.form['feuilles_avant_premiere_page'])
@@ -533,8 +536,6 @@ def generate_foreedge_form():
             nombre_pages_calcule = derniere_page_numerotee + (feuilles_avant_premiere_page * 2) + (feuilles_apres_derniere_page * 2)
             
             # Calcul du nombre de tranches (une tranche par feuille)
-            # Puisque chaque feuille a 2 pages, nombre de tranches = nombre de pages / 2
-            # On prend math.ceil car on arrondit toujours au supérieur pour le nombre de tranches.
             nombre_tranches_calcule = math.ceil(nombre_pages_calcule / 2)
 
 
@@ -567,7 +568,7 @@ def generate_foreedge_form():
         dossier_tranches_genere, erreur_tranches = generer_tranches_individuelles(
             chemin_image_source=filepath,
             hauteur_livre_mm=hauteur_livre,
-            nombre_pages_livre=nombre_pages_calcule, # Utiliser le nombre de pages calculé
+            nombre_pages_livre=nombre_pages_calcule,
             dpi_utilise=dpi_utilise,
             largeur_tranche_etiree_cible_mm=largeur_tranche_etiree_cible,
             progress_callback=lambda val, msg: None
@@ -581,22 +582,11 @@ def generate_foreedge_form():
             flash("Échec inattendu lors de la génération des tranches (aucun dossier retourné).", 'danger')
             return redirect(url_for('app_dashboard'))
 
-        # Générer l'image de simulation
-        simulation_path_actual, erreur_simulation = generer_image_simulation_livre(
-            dossier_tranches_source=dossier_tranches_genere,
-            output_simulation_path=simulation_final_path,
-            hauteur_livre_mm=hauteur_livre,
-            largeur_tranche_etiree_cible_mm=largeur_tranche_etiree_cible, # Toujours passé si fonction l'attend
-            nombre_pages_livre=nombre_pages_calcule, # Nombre de pages est toujours utile pour certains calculs DPI
-            dpi_utilise=dpi_utilise # DPI est également utile pour la simulation
-        )
-        
-        if erreur_simulation:
-            flash(f"Attention: Le PDF a été généré, mais une erreur est survenue lors de la simulation: {erreur_simulation}", 'warning')
-            print(f"Erreur simulation: {erreur_simulation}")
-            simulation_image_url = None
-        else:
-            simulation_image_url = url_for('get_simulation_image', filename=os.path.basename(simulation_final_path))
+        # MODIFICATION: Suppression de l'appel à generer_image_simulation_livre
+        # simulation_path_actual, erreur_simulation = generer_image_simulation_livre(...)
+        # if erreur_simulation: ...
+        # simulation_image_url = url_for('get_simulation_image', filename=os.path.basename(simulation_final_path))
+        simulation_image_url = None # Plus de simulation
 
 
         # Passer le chemin de sortie final du PDF à la fonction de génération de PDF
@@ -608,7 +598,7 @@ def generate_foreedge_form():
             pas_numero_tranche=pas_numero_tranche,
             progress_callback=lambda val, msg: None,
             image_source_original_path=filepath,
-            nombre_pages_livre_original=nombre_pages_calcule, # Utiliser le nombre de pages calculé
+            nombre_pages_livre_original=nombre_pages_calcule,
             output_pdf_path=pdf_final_path
         )
 
@@ -621,9 +611,9 @@ def generate_foreedge_form():
             return redirect(url_for('app_dashboard'))
 
         flash('Votre PDF a été généré avec succès ! Cliquez sur le lien pour télécharger.', 'success')
-        # Stocker les chemins dans la session pour les récupérer sur la page d'affichage
+        # Stocker le nom du fichier PDF dans la session (plus de simulation_image_url)
         session['last_generated_pdf_filename'] = os.path.basename(pdf_final_path_actual)
-        session['last_simulation_image_url'] = simulation_image_url
+        session['last_simulation_image_url'] = None # Supprimer la session simulation URL
 
         return redirect(url_for('app_dashboard'))
 
@@ -648,16 +638,24 @@ def generate_foreedge_form():
             except OSError as e:
                 print(f"Erreur lors du nettoyage du dossier temporaire '{temp_tranches_dir}': {e}")
         
-        # Les fichiers PDF et simulation ne sont PAS supprimés ici immédiatement,
-        # car ils doivent être accessibles pour le téléchargement et l'affichage.
-        # Une tâche de nettoyage régulière ou une suppression après X temps/téléchargements sera nécessaire.
+        # Les fichiers PDF ne sont PAS supprimés ici immédiatement,
+        # car ils doivent être accessibles pour le téléchargement.
+        # NOUVEAU: Suppression du nettoyage de la simulation ici
+        # if 'simulation_final_path' in locals() and os.path.exists(simulation_final_path):
+        #    try:
+        #        os.remove(simulation_final_path)
+        #        print(f"DEBUG: Fichier simulation '{simulation_final_path}' supprimé après envoi.")
+        #    except OSError as e:
+        #        print(f"Erreur lors du nettoyage du fichier simulation '{simulation_final_path}': {e}")
 
 
-@app.route('/simulation-images/<path:filename>')
-def get_simulation_image(filename):
-    from flask import send_from_directory
-    return send_from_directory(SIMULATION_IMG_FOLDER, filename)
+# MODIFICATION: Suppression de la route pour servir les images de simulation
+# @app.route('/simulation-images/<path:filename>')
+# def get_simulation_image(filename):
+#     from flask import send_from_directory
+#     return send_from_directory(SIMULATION_IMG_FOLDER, filename)
 
+# NOUVEAU: Route pour servir les PDF générés (cette route est conservée)
 @app.route('/generated-pdfs/<path:filename>')
 def get_generated_pdf(filename):
     from flask import send_from_directory
