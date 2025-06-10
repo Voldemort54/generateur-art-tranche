@@ -58,6 +58,18 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f'<User {self.email}>'
 
+# NOUVEAU MODÈLE: Pour stocker les messages de contact
+class ContactMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sender_email = db.Column(db.String(120), nullable=False)
+    subject = db.Column(db.String(255), nullable=False)
+    message_content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow) # Date et heure de réception
+
+    def __repr__(self):
+        return f'<ContactMessage {self.subject} from {self.sender_email}>'
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -85,7 +97,7 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated or not current_user.is_admin: 
             flash("Accès non autorisé : Vous n'êtes pas un administrateur.", 'danger')
-            return redirect(url_for('public_home'))
+            return redirect(url_for('public_home')) # Redirection vers la page d'accueil publique
         return f(*args, **kwargs)
     return decorated_function
 
@@ -112,7 +124,7 @@ def app_dashboard():
             current_user.premium_until = None
             db.session.commit()
             flash("Votre abonnement a expiré. Veuillez le renouveler.", 'danger')
-            return redirect(url_for('subscribe'))
+            return redirect(url_for('subscribe')) # Redirige vers l'abonnement si expiré
 
     # Si l'utilisateur n'est PAS premium et n'est PAS admin, le rediriger vers l'abonnement
     if not current_user.is_premium and not current_user.is_admin: 
@@ -125,7 +137,7 @@ def app_dashboard():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('app_dashboard'))
+        return redirect(url_for('app_dashboard')) # Redirection vers la page de l'application après connexion
 
     if request.method == 'POST':
         email = request.form['email']
@@ -134,7 +146,7 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             flash('Connexion réussie !', 'success')
-            return redirect(url_for('app_dashboard'))
+            return redirect(url_for('app_dashboard')) # Redirection vers la page de l'application après connexion
         else:
             flash('Email ou mot de passe incorrect.', 'danger')
     return render_template('login.html')
@@ -142,7 +154,7 @@ def login():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for('app_dashboard'))
+        return redirect(url_for('app_dashboard')) # Redirection vers la page de l'application après inscription
 
     if request.method == 'POST':
         email = request.form['email']
@@ -163,7 +175,7 @@ def register():
         db.session.add(new_user)
         db.session.commit()
         flash('Inscription réussie ! Vous pouvez maintenant vous connecter.', 'success')
-        return redirect(url_for('login'))
+        return redirect(url_for('login')) # Après inscription, redirige vers la page de connexion
             
     return render_template('register.html')
 
@@ -180,17 +192,50 @@ def subscribe():
     site_base_url = "https://generateur-art-tranche.onrender.com" 
     return render_template('subscribe.html', site_base_url=site_base_url)
 
-# NOUVELLE ROUTE: Page d'informations légales
+# Page d'informations légales
 @app.route('/legal')
 def legal_info():
     return render_template('legal.html')
 
-# NOUVELLE ROUTE: Page de contact
-@app.route('/contact')
+# MODIFICATION/AJOUT: Page de contact avec gestion de formulaire POST
+@app.route('/contact', methods=['GET', 'POST'])
 def contact_page():
-    return render_template('contact.html')
+    if request.method == 'POST':
+        sender_email = request.form['sender_email']
+        subject = request.form['subject']
+        message_content = request.form['message_content']
 
-# NOUVELLE ROUTE: Page de gestion de compte utilisateur
+        if not sender_email or not subject or not message_content:
+            flash('Tous les champs du formulaire de contact sont requis.', 'danger')
+            return redirect(url_for('contact_page'))
+        
+        # Validation d'email simple (Flask-Mail aurait des validateurs plus robustes)
+        if '@' not in sender_email or '.' not in sender_email:
+            flash('Veuillez entrer une adresse e-mail valide.', 'danger')
+            return redirect(url_for('contact_page'))
+
+        try:
+            new_message = ContactMessage(
+                sender_email=sender_email,
+                subject=subject,
+                message_content=message_content
+            )
+            db.session.add(new_message)
+            db.session.commit()
+            flash('Votre message a été envoyé avec succès ! Nous vous recontacterons bientôt.', 'success')
+            return redirect(url_for('contact_page'))
+        except Exception as e:
+            db.session.rollback() # Annule la transaction en cas d'erreur
+            flash(f'Une erreur est survenue lors de l\'envoi de votre message : {e}', 'danger')
+            print(f"Erreur lors de l'enregistrement du message de contact: {e}") # Log détaillé
+            return redirect(url_for('contact_page'))
+
+    # Pour la requête GET, pré-remplir l'e-mail si l'utilisateur est connecté
+    prefill_email = current_user.email if current_user.is_authenticated else ''
+    return render_template('contact.html', prefill_email=prefill_email)
+
+
+# Page de gestion de compte utilisateur
 @app.route('/account')
 @login_required 
 def account_management():
@@ -202,6 +247,14 @@ def account_management():
 def admin_dashboard():
     users = User.query.all()
     return render_template('admin.html', users=users)
+
+# AJOUT: Route pour consulter les messages de contact (pour l'admin)
+@app.route('/admin/contact-messages')
+@admin_required
+def admin_contact_messages():
+    messages = ContactMessage.query.order_by(ContactMessage.timestamp.desc()).all()
+    return render_template('admin_contact_messages.html', messages=messages)
+
 
 @app.route('/admin/toggle-premium/<int:user_id>', methods=['POST'])
 @admin_required
