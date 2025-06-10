@@ -85,7 +85,7 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated or not current_user.is_admin: 
             flash("Accès non autorisé : Vous n'êtes pas un administrateur.", 'danger')
-            return redirect(url_for('public_home')) # Redirection vers la page d'accueil publique
+            return redirect(url_for('public_home'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -98,7 +98,7 @@ def public_home():
 
 # ROUTE DE L'APPLICATION (le générateur) : Protégée par @login_required
 @app.route('/app')
-@login_required # IMPORTANT: Seuls les utilisateurs connectés peuvent accéder à cette page
+@login_required 
 def app_dashboard():
     # Calculer les jours restants si premium
     days_remaining = None
@@ -112,7 +112,7 @@ def app_dashboard():
             current_user.premium_until = None
             db.session.commit()
             flash("Votre abonnement a expiré. Veuillez le renouveler.", 'danger')
-            return redirect(url_for('subscribe')) # Redirige vers l'abonnement si expiré
+            return redirect(url_for('subscribe'))
 
     # Si l'utilisateur n'est PAS premium et n'est PAS admin, le rediriger vers l'abonnement
     if not current_user.is_premium and not current_user.is_admin: 
@@ -125,7 +125,7 @@ def app_dashboard():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('app_dashboard')) # Redirection vers la page de l'application après connexion
+        return redirect(url_for('app_dashboard'))
 
     if request.method == 'POST':
         email = request.form['email']
@@ -134,7 +134,7 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             flash('Connexion réussie !', 'success')
-            return redirect(url_for('app_dashboard')) # Redirection vers la page de l'application après connexion
+            return redirect(url_for('app_dashboard'))
         else:
             flash('Email ou mot de passe incorrect.', 'danger')
     return render_template('login.html')
@@ -142,7 +142,7 @@ def login():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for('app_dashboard')) # Redirection vers la page de l'application après inscription
+        return redirect(url_for('app_dashboard'))
 
     if request.method == 'POST':
         email = request.form['email']
@@ -163,19 +163,19 @@ def register():
         db.session.add(new_user)
         db.session.commit()
         flash('Inscription réussie ! Vous pouvez maintenant vous connecter.', 'success')
-        return redirect(url_for('login')) # Après inscription, redirige vers la page de connexion
+        return redirect(url_for('login'))
             
     return render_template('register.html')
 
 @app.route('/logout')
-@login_required # Doit être connecté pour se déconnecter
+@login_required
 def logout():
     logout_user()
     flash('Vous avez été déconnecté.', 'info')
-    return redirect(url_for('public_home')) # Redirection vers la page d'accueil publique après déconnexion
+    return redirect(url_for('public_home'))
 
 @app.route('/subscribe')
-@login_required # La page d'abonnement est accessible uniquement aux utilisateurs connectés (qui ne sont pas premium)
+@login_required
 def subscribe():
     site_base_url = "https://generateur-art-tranche.onrender.com" 
     return render_template('subscribe.html', site_base_url=site_base_url)
@@ -185,32 +185,35 @@ def subscribe():
 def legal_info():
     return render_template('legal.html')
 
+# NOUVELLE ROUTE: Page de contact
+@app.route('/contact')
+def contact_page():
+    return render_template('contact.html')
+
 # NOUVELLE ROUTE: Page de gestion de compte utilisateur
 @app.route('/account')
-@login_required # Seuls les utilisateurs connectés peuvent y accéder
+@login_required 
 def account_management():
-    # current_user est disponible grâce à @login_required
     return render_template('account.html', current_user=current_user)
 
 # --- ROUTES D'ADMINISTRATION (Protégées) ---
 @app.route('/admin')
-@admin_required # Seuls les administrateurs peuvent y accéder
+@admin_required 
 def admin_dashboard():
-    users = User.query.all() # Récupère tous les utilisateurs
+    users = User.query.all()
     return render_template('admin.html', users=users)
 
 @app.route('/admin/toggle-premium/<int:user_id>', methods=['POST'])
-@admin_required # Seuls les administrateurs peuvent y accéder
+@admin_required
 def admin_toggle_premium(user_id):
     user = User.query.get_or_404(user_id)
-    user.is_premium = not user.is_premium # Inverse le statut premium
+    user.is_premium = not user.is_premium
     if user.is_premium:
-        # Définit la date de fin de l'abonnement à 30 jours à partir d'aujourd'hui
         user.premium_until = date.today() + timedelta(days=30) 
         flash(f"Compte '{user.email}' activé en mode Premium jusqu'au {user.premium_until} !", 'success')
-        print(f"ADMIN ACTION: {user.email} set to premium until {user.premium_until}.") # Log sur le serveur
+        print(f"ADMIN ACTION: {user.email} set to premium until {user.premium_until}.")
     else:
-        user.premium_until = None # Réinitialise la date de fin si désactivé
+        user.premium_until = None
         flash(f"Compte '{user.email}' désactivé du mode Premium.", 'info')
         print(f"ADMIN ACTION: {user.email} set to non-premium.")
 
@@ -218,13 +221,13 @@ def admin_toggle_premium(user_id):
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/set-admin/<int:user_id>', methods=['POST'])
-@admin_required # Seuls les administrateurs peuvent y accéder
+@admin_required
 def admin_set_admin(user_id):
     user = User.query.get_or_404(user_id)
-    user.is_admin = not user.is_admin # Inverse le statut admin
+    user.is_admin = not user.is_admin
     db.session.commit()
     flash(f"Statut administrateur de '{user.email}' changé à {user.is_admin}.", 'info')
-    print(f"ADMIN ACTION: {user.email} admin status set to {user.is_user}.")
+    print(f"ADMIN ACTION: {user.email} admin status set to {user.is_admin}.")
     return redirect(url_for('admin_dashboard'))
 
 
@@ -261,7 +264,7 @@ def generate_foreedge_form():
     temp_tranches_dir = os.path.join(TEMP_PROCESSING_FOLDER, f"session_{timestamp}_{secrets.token_hex(8)}")
     os.makedirs(temp_tranches_dir, exist_ok=True)
 
-    response = None # Initialise la variable de réponse
+    response = None
 
     try:
         file.save(filepath)
@@ -299,7 +302,7 @@ def generate_foreedge_form():
             nombre_pages_livre=nombre_pages,
             dpi_utilise=dpi_utilise,
             largeur_tranche_etiree_cible_mm=largeur_tranche_etiree_cible,
-            progress_callback=lambda val, msg: None # Pas de callback de progression pour le web synchrone
+            progress_callback=lambda val, msg: None
         )
 
         if erreur_tranches:
@@ -317,10 +320,10 @@ def generate_foreedge_form():
             largeur_tranche_etiree_cible_mm_pdf=largeur_tranche_etiree_cible,
             debut_numero_tranche=debut_numero_tranche,
             pas_numero_tranche=pas_numero_tranche,
-            progress_callback=lambda val, msg: None, # Pas de callback de progression pour le web synchrone
+            progress_callback=lambda val, msg: None,
             image_source_original_path=filepath,
             nombre_pages_livre_original=nombre_pages,
-            output_pdf_path=pdf_final_path # NOUVEAU PARAMÈTRE: chemin où enregistrer le PDF
+            output_pdf_path=pdf_final_path
         )
 
         if erreur_pdf:
@@ -333,16 +336,14 @@ def generate_foreedge_form():
 
         flash('Votre PDF a été généré avec succès !', 'success')
         
-        # Capture la réponse pour s'assurer que le fichier est envoyé avant le nettoyage
         response = send_file(pdf_final_path_actual, as_attachment=True, download_name=os.path.basename(pdf_final_path_actual))
         return response
 
     except Exception as e:
         flash(f"Une erreur inattendue est survenue : {e}", 'danger')
-        print(f"Erreur inattendue dans /generate: {e}") # Log d'erreur détaillé
+        print(f"Erreur inattendue dans /generate: {e}")
         return redirect(url_for('app_dashboard'))
     finally:
-        # Nettoyage de l'image source téléchargée
         if os.path.exists(filepath): 
             try:
                 os.remove(filepath)
@@ -350,7 +351,6 @@ def generate_foreedge_form():
             except OSError as e:
                 print(f"Erreur lors du nettoyage du fichier source '{filepath}': {e}")
         
-        # Nettoyage du dossier temporaire des tranches
         if os.path.exists(temp_tranches_dir): 
             try:
                 shutil.rmtree(temp_tranches_dir)
@@ -358,8 +358,6 @@ def generate_foreedge_form():
             except OSError as e:
                 print(f"Erreur lors du nettoyage du dossier temporaire '{temp_tranches_dir}': {e}")
         
-        # Nettoyage du PDF final généré
-        # Il est essentiel de supprimer le PDF après l'envoi pour éviter la saturation du disque sur Render.
         if 'pdf_final_path' in locals() and os.path.exists(pdf_final_path):
             try:
                 os.remove(pdf_final_path)
@@ -369,5 +367,4 @@ def generate_foreedge_form():
 
 
 if __name__ == '__main__':
-    # La création de la base de données est maintenant gérée par le script init_db.py exécuté dans la Build Command de Render.
     app.run(debug=True)

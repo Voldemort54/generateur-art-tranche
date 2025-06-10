@@ -110,13 +110,14 @@
         <a href="{{ url_for('app_dashboard') }}" class="brand">Art sur Tranche</a>
         <div class="nav-links">
             <a href="{{ url_for('app_dashboard') }}">Application</a>
-            {% if current_user.is_authenticated %} {# NOUVEAU: Affiche "Mon Compte" seulement si connecté #}
+            {% if current_user.is_authenticated %}
                 <a href="{{ url_for('account_management') }}">Mon Compte</a>
+                <a href="{{ url_for('contact_page') }}">Contact</a> {# NOUVEAU LIEN #}
             {% endif %}
             {% if current_user.is_admin %}
                 <a href="{{ url_for('admin_dashboard') }}">Admin</a>
             {% endif %}
-            {% if current_user.is_authenticated %} {# NOUVEAU: Affiche "Déconnexion" seulement si connecté #}
+            {% if current_user.is_authenticated %}
                 <a href="{{ url_for('logout') }}">Déconnexion</a>
             {% endif %}
         </div>

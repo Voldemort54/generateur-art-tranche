@@ -12,7 +12,7 @@
             background-color: #f0f2f5;
             color: #333;
             display: flex;
-            flex-direction: column; /* Utiliser column pour le footer */
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
@@ -26,7 +26,7 @@
             border-radius: 12px;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease-in-out;
-            flex-grow: 1; /* Permet au container de prendre de l'espace */
+            flex-grow: 1;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -76,8 +76,8 @@
             background-color: #5a6268;
         }
         .footer-links {
-            margin-top: auto; /* Pousse le footer vers le bas du container */
-            padding-top: 40px; /* Espace au-dessus des liens */
+            margin-top: auto;
+            padding-top: 40px;
             font-size: 0.9em;
             color: #777;
         }
@@ -125,6 +125,7 @@
 
         <div class="footer-links">
             <a href="{{ url_for('legal_info') }}">Mentions Légales / CGU / RGPD</a>
+            <a href="{{ url_for('contact_page') }}">Contact</a> {# NOUVEAU LIEN #}
             <p>&copy; 2025 Générateur d'Art sur Tranche. Tous droits réservés.</p>
         </div>
     </div>
