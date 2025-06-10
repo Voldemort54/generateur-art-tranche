@@ -7,7 +7,7 @@ import shutil
 from datetime import datetime, date, timedelta
 import secrets
 import functools
-import json # Gardé car potentiellement utile pour d'autres besoins, mais plus pour PayPal
+import json
 
 # Importez vos fonctions de traitement d'image depuis le dossier core_logic
 from core_logic.image_processing import generer_tranches_individuelles, generer_pdf_a_partir_tranches
@@ -21,7 +21,8 @@ app.secret_key = os.environ.get('SECRET_KEY', 'votre_cle_secrete_de_secours_ici_
 db_uri_env = os.environ.get('DATABASE_URL')
 print(f"DEBUG: DATABASE_URL from environment: {db_uri_env}")
 if db_uri_env:
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri_env.replace("postgres://", "postgresql://", 1) # Correction pour SQLAlchemy 2.0
+    # Correction pour SQLAlchemy 2.0 qui attend le schéma 'postgresql://'
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri_env.replace("postgres://", "postgresql://", 1)
     print("DEBUG: Using DATABASE_URL from environment.")
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
@@ -84,14 +85,24 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated or not current_user.is_admin: 
             flash("Accès non autorisé : Vous n'êtes pas un administrateur.", 'danger')
-            return redirect(url_for('index')) 
+            return redirect(url_for('public_home')) # Redirection vers la page d'accueil publique
         return f(*args, **kwargs)
     return decorated_function
 
 # --- Routes de l'application ---
+
+# NOUVELLE ROUTE: Page d'accueil publique
 @app.route('/')
+def public_home():
+    # Si l'utilisateur est déjà connecté, le rediriger vers la page de l'application
+    if current_user.is_authenticated:
+        return redirect(url_for('app_dashboard'))
+    return render_template('home.html')
+
+# L'ancienne route 'index' est maintenant '/app' ou '/dashboard' et est protégée
+@app.route('/app')
 @login_required
-def index():
+def app_dashboard(): # Renommé de 'index' à 'app_dashboard'
     # Calculer les jours restants si premium
     days_remaining = None
     if current_user.is_premium and current_user.premium_until:
@@ -106,17 +117,18 @@ def index():
             flash("Votre abonnement a expiré. Veuillez le renouveler.", 'danger')
             return redirect(url_for('subscribe'))
 
-    # Permettre aux admins d'accéder à l'index même s'ils ne sont pas premium.
+    # Permettre aux admins d'accéder à la page même s'ils ne sont pas premium.
     if not current_user.is_premium and not current_user.is_admin: 
         flash("Vous devez avoir un abonnement actif pour utiliser le générateur.", 'info')
         return redirect(url_for('subscribe'))
     
     return render_template('index.html', is_premium=current_user.is_premium, days_remaining=days_remaining)
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('index'))
+        return redirect(url_for('app_dashboard')) # Redirection vers la nouvelle page de l'application
 
     if request.method == 'POST':
         email = request.form['email']
@@ -125,7 +137,7 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             flash('Connexion réussie !', 'success')
-            return redirect(url_for('index')) 
+            return redirect(url_for('app_dashboard')) # Redirection vers la nouvelle page de l'application
         else:
             flash('Email ou mot de passe incorrect.', 'danger')
     return render_template('login.html')
@@ -133,7 +145,7 @@ def login():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for('index'))
+        return redirect(url_for('app_dashboard')) # Redirection vers la nouvelle page de l'application
 
     if request.method == 'POST':
         email = request.form['email']
@@ -159,25 +171,17 @@ def register():
     return render_template('register.html')
 
 @app.route('/logout')
-@login_required
+@login_required # Doit être connecté pour se déconnecter
 def logout():
     logout_user()
     flash('Vous avez été déconnecté.', 'info')
-    return redirect(url_for('login'))
+    return redirect(url_for('public_home')) # Redirection vers la page d'accueil publique après déconnexion
 
 @app.route('/subscribe')
 @login_required
 def subscribe():
-    # L'URL du site est toujours utile, même si le paiement est externe
     site_base_url = "https://generateur-art-tranche.onrender.com" 
     return render_template('subscribe.html', site_base_url=site_base_url)
-
-# --- ROUTES PAYPAL SUPPRIMÉES ---
-# @app.route('/paypal-success')
-# @app.route('/paypal-cancel')
-# @app.route('/paypal-webhook')
-# --- FIN ROUTES PAYPAL SUPPRIMÉES ---
-
 
 # --- ROUTES D'ADMINISTRATION (Protégées) ---
 @app.route('/admin')
@@ -234,7 +238,7 @@ def generate_foreedge_form():
 
     if not allowed_file(file.filename):
         flash(f'Type de fichier non autorisé. Seules les images {", ".join(ALLOWED_EXTENSIONS).upper()} sont acceptées.', 'danger')
-        return redirect(url_for('index'))
+        return redirect(url_for('app_dashboard')) # Redirection vers la page de l'application
 
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
     original_filename_base, original_filename_ext = os.path.splitext(file.filename)
@@ -274,10 +278,10 @@ def generate_foreedge_form():
 
         except ValueError as ve:
             flash(f"Erreur de saisie : {ve}. Veuillez vérifier vos paramètres numériques.", 'danger')
-            return redirect(url_for('index'))
+            return redirect(url_for('app_dashboard')) # Redirection vers la page de l'application
         except Exception as e:
             flash(f"Une erreur est survenue lors de la validation des paramètres : {e}", 'danger')
-            return redirect(url_for('index'))
+            return redirect(url_for('app_dashboard')) # Redirection vers la page de l'application
 
 
         dossier_tranches_genere, erreur_tranches = generer_tranches_individuelles(
@@ -291,11 +295,11 @@ def generate_foreedge_form():
 
         if erreur_tranches:
             flash(f"Erreur lors de la génération des tranches : {erreur_tranches}", 'danger')
-            return redirect(url_for('index'))
+            return redirect(url_for('app_dashboard')) # Redirection vers la page de l'application
 
         if not dossier_tranches_genere:
             flash("Échec inattendu lors de la génération des tranches (aucun dossier retourné).", 'danger')
-            return redirect(url_for('index'))
+            return redirect(url_for('app_dashboard')) # Redirection vers la page de l'application
 
         # Passer le chemin de sortie final du PDF à la fonction de génération de PDF
         pdf_final_path_actual, erreur_pdf = generer_pdf_a_partir_tranches(
@@ -312,11 +316,11 @@ def generate_foreedge_form():
 
         if erreur_pdf:
             flash(f"Erreur lors de la génération du PDF : {erreur_pdf}", 'danger')
-            return redirect(url_for('index'))
+            return redirect(url_for('app_dashboard')) # Redirection vers la page de l'application
         
         if not pdf_final_path_actual:
             flash("Échec inattendu lors de la génération du PDF (aucun chemin retourné).", 'danger')
-            return redirect(url_for('index'))
+            return redirect(url_for('app_dashboard')) # Redirection vers la page de l'application
 
         flash('Votre PDF a été généré avec succès !', 'success')
         
@@ -327,7 +331,7 @@ def generate_foreedge_form():
     except Exception as e:
         flash(f"Une erreur inattendue est survenue : {e}", 'danger')
         print(f"Erreur inattendue dans /generate: {e}") # Log d'erreur détaillé
-        return redirect(url_for('index'))
+        return redirect(url_for('app_dashboard')) # Redirection vers la page de l'application
     finally:
         # Nettoyage de l'image source téléchargée
         if os.path.exists(filepath): 

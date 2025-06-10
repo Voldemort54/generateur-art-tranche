@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur d'Art sur Tranche de Livre - Accueil</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif; /* Utilisation d'Inter si disponible */
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5; /* Un gris clair moderne */
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px;
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 12px; /* Coins plus arrondis */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); /* Ombre plus prononcée */
+            transition: transform 0.3s ease-in-out;
+        }
+        .container:hover {
+            transform: translateY(-5px); /* Petit effet au survol */
+        }
+        h1 {
+            color: #2c3e50; /* Un bleu foncé élégant */
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            line-height: 1.2;
+        }
+        p {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            color: #555;
+        }
+        .buttons-group {
+            display: flex;
+            justify-content: center;
+            gap: 20px; /* Espace entre les boutons */
+            flex-wrap: wrap; /* Pour la réactivité mobile */
+        }
+        .button {
+            background-color: #007bff; /* Bleu primaire */
+            color: white;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px; /* Bords arrondis */
+            cursor: pointer;
+            font-size: 1.1em;
+            text-decoration: none;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2); /* Ombre sur le bouton */
+        }
+        .button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px); /* Effet au survol */
+        }
+        .button.secondary {
+            background-color: #6c757d; /* Gris secondaire */
+            box-shadow: 0 4px 8px rgba(108, 117, 125, 0.2);
+        }
+        .button.secondary:hover {
+            background-color: #5a6268;
+        }
+        .footer-links {
+            margin-top: 40px;
+            font-size: 0.9em;
+            color: #777;
+        }
+        .footer-links a {
+            color: #007bff;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+        /* Réactivité de base pour les petits écrans */
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+            p {
+                font-size: 1em;
+            }
+            .buttons-group {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .button {
+                width: 80%; /* Occupe plus de largeur sur mobile */
+                margin: 0 auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Bienvenue sur le Générateur d'Art sur Tranche de Livre</h1>
+        <p>Transformez n'importe quelle image en un motif unique pour décorer les tranches de vos livres ! Que vous soyez un artiste, un collectionneur ou un passionné, créez des œuvres d'art personnalisées pour vos bibliothèques.</p>
+        <p>Notre application découpe et adapte votre image pour qu'elle puisse être appliquée tranche par tranche sur les pages de votre livre, révélant un motif spectaculaire lorsque les pages sont légèrement décalées.</p>
+
+        <div class="buttons-group">
+            <a href="{{ url_for('login') }}" class="button">Se connecter</a>
+            <a href="{{ url_for('register') }}" class="button secondary">S'inscrire</a>
+        </div>
+
+        <div class="footer-links">
+            <p>&copy; 2025 Générateur d'Art sur Tranche. Tous droits réservés.</p>
+        </div>
+    </div>
+</body>
+</html>
