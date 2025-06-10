@@ -21,24 +21,24 @@
                 width: 100%;
                 border-collapse: collapse;
                 margin-top: 20px;
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); /* Ombre légère pour le tableau */
-                border-radius: 8px; /* Bords arrondis pour le tableau */
-                overflow: hidden; /* Assure que les bords arrondis sont visibles */
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+                border-radius: 8px;
+                overflow: hidden;
             }
             .content-container th,
             .content-container td {
-                border: 1px solid #eee; /* Lignes plus fines */
+                border: 1px solid #eee;
                 padding: 12px 15px;
                 text-align: left;
                 font-size: 0.95em;
             }
             .content-container th {
-                background-color: #f8f8f8; /* Arrière-plan des en-têtes */
+                background-color: #f8f8f8;
                 font-weight: bold;
                 color: #555;
             }
             .content-container tr:nth-child(even) {
-                background-color: #fdfdfd; /* Lignes alternées pour la lisibilité */
+                background-color: #fdfdfd;
             }
             .content-container .action-form {
                 display: inline-block;
@@ -74,9 +74,34 @@
             .content-container .back-link a:hover {
                 text-decoration: underline;
             }
+            .admin-menu { /* Nouveau style pour le menu admin */
+                margin-top: 20px;
+                margin-bottom: 30px;
+                text-align: center;
+            }
+            .admin-menu a {
+                background-color: #4CAF50; /* Vert pour les actions admin */
+                color: white;
+                padding: 10px 20px;
+                border-radius: 6px;
+                text-decoration: none;
+                display: inline-block;
+                margin: 0 10px;
+                transition: background-color 0.3s ease;
+            }
+            .admin-menu a:hover {
+                background-color: #45a049;
+            }
         </style>
 
         <h1>Tableau de Bord Administrateur</h1>
+
+        {# Les messages flash sont maintenant gérés dans base.html #}
+
+        <div class="admin-menu"> {# NOUVEAU MENU ADMIN #}
+            <a href="{{ url_for('admin_contact_messages') }}">Voir les messages de contact</a>
+            {# Autres liens admin si nécessaire #}
+        </div>
 
         <h2>Liste des Utilisateurs</h2>
         <table>
