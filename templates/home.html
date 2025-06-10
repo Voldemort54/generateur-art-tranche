@@ -119,13 +119,19 @@
         <p>Notre application découpe et adapte votre image pour qu'elle puisse être appliquée tranche par tranche sur les pages de votre livre, révélant un motif spectaculaire lorsque les pages sont légèrement décalées.</p>
 
         <div class="buttons-group">
-            <a href="{{ url_for('login') }}" class="button">Se connecter</a>
-            <a href="{{ url_for('register') }}" class="button secondary">S'inscrire</a>
+            {# NOUVEAU: Affichage conditionnel des boutons sur la page d'accueil #}
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('app_dashboard') }}" class="button">Accéder à l'application</a>
+                <a href="{{ url_for('logout') }}" class="button secondary">Déconnexion</a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="button">Se connecter</a>
+                <a href="{{ url_for('register') }}" class="button secondary">S'inscrire</a>
+            {% endif %}
         </div>
 
         <div class="footer-links">
             <a href="{{ url_for('legal_info') }}">Mentions Légales / CGU / RGPD</a>
-            <a href="{{ url_for('contact_page') }}">Contact</a> {# NOUVEAU LIEN #}
+            <a href="{{ url_for('contact_page') }}">Contact</a>
             <p>&copy; 2025 Générateur d'Art sur Tranche. Tous droits réservés.</p>
         </div>
     </div>

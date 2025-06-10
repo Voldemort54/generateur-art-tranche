@@ -74,7 +74,7 @@
             .content-container .back-link a:hover {
                 text-decoration: underline;
             }
-            .admin-menu { /* Nouveau style pour le menu admin */
+            .admin-menu { /* Style pour le menu admin */
                 margin-top: 20px;
                 margin-bottom: 30px;
                 text-align: center;
@@ -88,9 +88,22 @@
                 display: inline-block;
                 margin: 0 10px;
                 transition: background-color 0.3s ease;
+                position: relative; /* Pour le badge de notification */
             }
             .admin-menu a:hover {
                 background-color: #45a049;
+            }
+            .notification-badge { /* Style du badge de notification */
+                position: absolute;
+                top: -8px;
+                right: -8px;
+                background-color: #ff0000; /* Rouge */
+                color: white;
+                font-size: 0.7em;
+                font-weight: bold;
+                padding: 4px 7px;
+                border-radius: 50%; /* Cercle */
+                border: 1px solid white; /* Bordure blanche */
             }
         </style>
 
@@ -98,8 +111,13 @@
 
         {# Les messages flash sont maintenant gérés dans base.html #}
 
-        <div class="admin-menu"> {# NOUVEAU MENU ADMIN #}
-            <a href="{{ url_for('admin_contact_messages') }}">Voir les messages de contact</a>
+        <div class="admin-menu">
+            <a href="{{ url_for('admin_contact_messages') }}">
+                Voir les messages de contact
+                {% if unread_messages_count > 0 %}
+                    <span class="notification-badge">{{ unread_messages_count }}</span>
+                {% endif %}
+            </a>
             {# Autres liens admin si nécessaire #}
         </div>
 

@@ -12,6 +12,43 @@
                 margin-bottom: 30px;
                 font-size: 2.2em;
             }
+            .filter-form { /* Style pour le formulaire de filtre */
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 30px;
+                padding: 15px;
+                background-color: #f8f8f8;
+                border-radius: 8px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            }
+            .filter-form label {
+                font-weight: bold;
+                color: #555;
+            }
+            .filter-form input[type="email"] {
+                flex-grow: 1; /* Permet à l'input de prendre de la place */
+                max-width: 300px;
+                padding: 8px 12px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                font-size: 0.95em;
+            }
+            .filter-form button {
+                background-color: #007bff;
+                color: white;
+                padding: 8px 15px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 0.95em;
+                transition: background-color 0.3s ease;
+            }
+            .filter-form button:hover {
+                background-color: #0056b3;
+            }
+
             .contact-message-list {
                 margin-top: 30px;
             }
@@ -23,6 +60,23 @@
                 margin-bottom: 20px;
                 box-shadow: 0 2px 5px rgba(0,0,0,0.05);
                 text-align: left;
+                position: relative; /* Pour le badge non lu */
+            }
+            .message-card.unread { /* Style pour les messages non lus */
+                background-color: #fffbe6; /* Jaune très clair */
+                border-color: #ffeeba;
+                box-shadow: 0 2px 8px rgba(255, 200, 0, 0.15);
+            }
+            .unread-badge { /* Badge "Nouveau" */
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background-color: #ff6347; /* Rouge orangé */
+                color: white;
+                padding: 5px 10px;
+                border-radius: 5px;
+                font-size: 0.8em;
+                font-weight: bold;
             }
             .message-card h3 {
                 color: #333;
@@ -42,9 +96,40 @@
                 margin-top: 15px;
                 border-top: 1px dashed #eee;
                 padding-top: 10px;
+                display: flex; /* Pour aligner info et actions */
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap; /* Pour la réactivité */
+                gap: 10px;
             }
             .meta-info strong {
                 color: #333;
+            }
+            .message-actions button {
+                background-color: #28a745; /* Vert pour 'Marquer comme lu' */
+                color: white;
+                padding: 6px 12px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 0.9em;
+                transition: background-color 0.3s ease;
+            }
+            .message-actions button:hover {
+                background-color: #218838;
+            }
+            .message-actions a {
+                background-color: #007bff; /* Bleu pour 'Répondre' */
+                color: white;
+                padding: 6px 12px;
+                border-radius: 5px;
+                text-decoration: none;
+                font-size: 0.9em;
+                margin-left: 10px;
+                transition: background-color 0.3s ease;
+            }
+            .message-actions a:hover {
+                background-color: #0056b3;
             }
             .no-messages {
                 text-align: center;
@@ -69,22 +154,54 @@
 
         <h1>Messages de Contact</h1>
 
+        {# Formulaire de filtre par e-mail #}
+        <div class="filter-form">
+            <form action="{{ url_for('admin_contact_messages') }}" method="GET" style="display: flex; gap: 10px; width: 100%; justify-content: center; align-items: center;">
+                <label for="filter_email">Filtrer par e-mail :</label>
+                <input type="email" id="filter_email" name="email" value="{{ filter_email }}" placeholder="ex: user@example.com">
+                <button type="submit">Rechercher</button>
+                {% if filter_email %}
+                    <a href="{{ url_for('admin_contact_messages') }}" class="button" style="background-color: #6c757d; text-decoration: none; padding: 8px 15px; border-radius: 5px; color: white;">Annuler filtre</a>
+                {% endif %}
+            </form>
+        </div>
+
+
         {% if messages %}
             <div class="contact-message-list">
                 {% for message in messages %}
-                    <div class="message-card">
+                    <div class="message-card {% if not message.is_read %}unread{% endif %}">
+                        {% if not message.is_read %}
+                            <span class="unread-badge">Nouveau</span>
+                        {% endif %}
                         <h3>Objet : {{ message.subject }}</h3>
-                        <p><strong>De :</strong> {{ message.sender_email }}</p>
+                        <p><strong>De :</strong> <a href="mailto:{{ message.sender_email }}">{{ message.sender_email }}</a></p> {# Email cliquable #}
                         <p><strong>Message :</strong></p>
                         <p style="white-space: pre-wrap;">{{ message.message_content }}</p> {# pre-wrap pour conserver les retours à la ligne #}
                         <div class="meta-info">
-                            Reçu le : {{ message.timestamp.strftime('%d/%m/%Y à %H:%M') }}
+                            <span>Reçu le : {{ message.timestamp.strftime('%d/%m/%Y à %H:%M') }}</span>
+                            <div class="message-actions">
+                                {% if not message.is_read %}
+                                    <form action="{{ url_for('admin_mark_message_as_read', message_id=message.id) }}" method="post" style="display:inline;">
+                                        <button type="submit">Marquer comme lu</button>
+                                    </form>
+                                {% else %}
+                                    <span>Lu</span>
+                                {% endif %}
+                                <a href="mailto:{{ message.sender_email }}?subject=RE: {{ message.subject }}" target="_blank">Répondre</a>
+                            </div>
                         </div>
                     </div>
                 {% endfor %}
             </div>
         {% else %}
-            <p class="no-messages">Aucun message de contact pour le moment.</p>
+            <p class="no-messages">
+                {% if filter_email %}
+                    Aucun message correspondant à l'e-mail "{{ filter_email }}".
+                {% else %}
+                    Aucun message de contact pour le moment.
+                {% endif %}
+            </p>
         {% endif %}
 
         <p class="back-link"><a href="{{ url_for('admin_dashboard') }}">Retour au Tableau de Bord Admin</a></p>

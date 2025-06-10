@@ -48,7 +48,7 @@
             list-style: none;
             padding: 0;
             margin: 20px auto;
-            max-width: 700px;
+            max-width: 700px; /* Largeur similaire au conteneur principal */
             text-align: center;
         }
         .flash-messages li {
@@ -82,6 +82,16 @@
             border-radius: 12px;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
         }
+        /* Nouveau style pour l'affichage de l'utilisateur connecté */
+        .user-status-display {
+            text-align: right;
+            padding: 10px 30px 0;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .user-status-display strong {
+            color: #2c3e50;
+        }
         /* Réactivité de base pour les petits écrans */
         @media (max-width: 600px) {
             .navbar {
@@ -102,6 +112,10 @@
                 padding: 25px 20px;
                 margin: 20px auto;
             }
+            .user-status-display {
+                text-align: center;
+                padding: 10px 20px 0;
+            }
         }
     </style>
 </head>
@@ -112,7 +126,7 @@
             <a href="{{ url_for('app_dashboard') }}">Application</a>
             {% if current_user.is_authenticated %}
                 <a href="{{ url_for('account_management') }}">Mon Compte</a>
-                <a href="{{ url_for('contact_page') }}">Contact</a> {# NOUVEAU LIEN #}
+                <a href="{{ url_for('contact_page') }}">Contact</a>
             {% endif %}
             {% if current_user.is_admin %}
                 <a href="{{ url_for('admin_dashboard') }}">Admin</a>
@@ -122,6 +136,13 @@
             {% endif %}
         </div>
     </nav>
+
+    {# NOUVEAU: Affichage de l'utilisateur connecté #}
+    {% if current_user.is_authenticated %}
+        <div class="user-status-display">
+            Connecté en tant que : <strong>{{ current_user.email }}</strong>
+        </div>
+    {% endif %}
 
     {# Affichage des messages flash (erreurs, succès, info) #}
     {% with messages = get_flashed_messages(with_categories=true) %}
