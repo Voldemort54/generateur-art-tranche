@@ -1,73 +1,108 @@
-{% extends "base.html" %}
-
-{% block title %}S'abonner - Générateur d'Art sur Tranche de Livre{% endblock %}
-
-{% block content %}
-    <div class="content-container">
-        <style>
-            /* Styles spécifiques à subscribe.html */
-            .content-container h1 {
-                color: #2c3e50;
-                margin-bottom: 30px;
-                font-size: 2.2em;
-            }
-            .content-container p {
-                font-size: 1.1em;
-                line-height: 1.6;
-                margin-bottom: 25px;
-                color: #555;
-            }
-            .content-container .gumroad-button-container {
-                margin-top: 30px;
-            }
-            .content-container .gumroad-button {
-                background-color: #337ab7; /* Une couleur bleue pour contraster */
-                color: white;
-                padding: 15px 30px;
-                border: none;
-                border-radius: 8px;
-                font-size: 1.1em;
-                cursor: pointer;
-                text-decoration: none;
-                display: inline-block;
-                transition: background-color 0.3s ease, transform 0.2s ease;
-                box-shadow: 0 4px 8px rgba(51, 122, 183, 0.2);
-            }
-            .content-container .gumroad-button:hover {
-                background-color: #286090;
-                transform: translateY(-2px);
-            }
-            .content-container small {
-                display: block; /* Pour que la balise small soit sur sa propre ligne */
-                margin-top: 30px;
-                font-size: 0.9em;
-                color: #777;
-            }
-            .content-container a {
-                color: #007bff;
-                text-decoration: none;
-                font-weight: bold;
-            }
-            .content-container a:hover {
-                text-decoration: underline;
-            }
-        </style>
-
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S'abonner - Générateur d'Art sur Tranche de Livre</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        p {
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        .gumroad-button-container { /* Nouveau style pour le bouton Gumroad */
+            margin-top: 30px;
+        }
+        .gumroad-button { /* Style de base pour un bouton simple */
+            background-color: #337ab7; /* Une couleur bleue pour contraster */
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            cursor: pointer;
+            text-decoration: none; /* Pour enlever le soulignement du lien */
+            display: inline-block; /* Pour que le padding fonctionne bien */
+            transition: background-color 0.3s ease;
+        }
+        .gumroad-button:hover {
+            background-color: #286090;
+        }
+        .flash-messages {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 20px;
+        }
+        .flash-messages li {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            border: 1px solid transparent;
+        }
+        .flash-messages li.success {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+        .flash-messages li.danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+        .flash-messages li.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border-color: #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
         <h1>Abonnez-vous pour un accès illimité !</h1>
+
+        {# Affichage des messages flash #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="flash-messages">
+            {% for category, message in messages %}
+              <li class="{{ category }}">{{ message }}</li>
+            {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
 
         <p>Obtenez un accès complet au générateur de PDF pour seulement **9,00 € par mois**.</p>
         <p>Profitez de toutes les fonctionnalités sans restrictions.</p>
 
         <div class="gumroad-button-container">
-            {# Insérez l'URL de votre produit d'abonnement Gumroad ici #}
-            <a href="URL_DE_VOTRE_PRODUIT_ABONNEMENT_GUMROAD" target="_blank" class="gumroad-button">
+            {# LIEN MIS À JOUR AVEC VOTRE URL GUMROAD #}
+            <a href="https://4098520480575.gumroad.com/l/awbltw" target="_blank" class="gumroad-button">
                 S'abonner via Gumroad
             </a>
         </div>
 
-        <p>
+        <p style="margin-top: 30px;">
             <small>Après le paiement sur Gumroad, votre compte sera activé manuellement par l'administrateur. Merci de votre patience !</small>
         </p>
         <p><a href="{{ url_for('public_home') }}">Retour à l'accueil</a></p>
     </div>
-{% endblock %}
+</body>
+</html>
